@@ -14,8 +14,9 @@ const uiFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "EcoBadminton | First Anniversary",
-  description: "Celebrate one year of EcoBadminton and RSVP for the party.",
+  title: "EcoBadminton | Kỷ niệm một năm",
+  description:
+    "Lời mời kỷ niệm một năm EcoBadminton và xác nhận tham dự buổi tiệc ngày 17/09/2026.",
 };
 
 export default function RootLayout({
