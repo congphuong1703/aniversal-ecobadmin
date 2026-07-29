@@ -70,9 +70,12 @@ export function RsvpExperience() {
   const [message, setMessage] = useState("");
   const [submittedAttending, setSubmittedAttending] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [resumeSubmissionAfterVerification, setResumeSubmissionAfterVerification] =
+    useState(false);
   const [failureContext, setFailureContext] =
     useState<FailureContext>("guests");
   const [error, setError] = useState("");
+  const [attendanceError, setAttendanceError] = useState("");
   const [status, setStatus] = useState("Đang tải danh sách khách mời…");
 
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -184,8 +187,15 @@ export function RsvpExperience() {
 
       const body = (await response.json()) as VerifyResponse;
       setVerificationToken(body.verificationToken);
-      setStep("responding");
-      setStatus("Xác minh thành công. Bạn có thể gửi phản hồi.");
+
+      if (resumeSubmissionAfterVerification && submissionId) {
+        setResumeSubmissionAfterVerification(false);
+        setStatus("Xác minh thành công. Đang thử lại phản hồi trước đó…");
+        await sendSubmission(submissionId, body.verificationToken);
+      } else {
+        setStep("responding");
+        setStatus("Xác minh thành công. Bạn có thể gửi phản hồi.");
+      }
     } catch {
       setFailureContext("verification");
       setStep("failure");
@@ -194,7 +204,10 @@ export function RsvpExperience() {
     }
   }
 
-  async function sendSubmission(clientSubmissionId: string) {
+  async function sendSubmission(
+    clientSubmissionId: string,
+    activeVerificationToken = verificationToken,
+  ) {
     if (attending === null) {
       return;
     }
@@ -208,7 +221,7 @@ export function RsvpExperience() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          verificationToken,
+          verificationToken: activeVerificationToken,
           attending,
           message: message.trim() || null,
           clientSubmissionId,
@@ -218,7 +231,7 @@ export function RsvpExperience() {
       if (!response.ok) {
         if (response.status === 401) {
           setVerificationToken("");
-          setSubmissionId(null);
+          setResumeSubmissionAfterVerification(true);
           setStep("verifying");
           setError("Phiên xác minh đã hết hạn. Vui lòng xác minh lại họ tên.");
           setStatus("Phiên xác minh đã hết hạn.");
@@ -232,6 +245,7 @@ export function RsvpExperience() {
       const body = (await response.json()) as SubmitResponse;
       setSubmittedAttending(body.submission.attending);
       setSubmissionId(null);
+      setResumeSubmissionAfterVerification(false);
       setStep("success");
       setStatus("Phản hồi đã được ghi nhận. Cảm ơn bạn!");
     } catch {
@@ -248,7 +262,7 @@ export function RsvpExperience() {
     event?.preventDefault();
 
     if (attending === null) {
-      setError("Vui lòng chọn tham dự hoặc không tham dự.");
+      setAttendanceError("Vui lòng chọn tham dự hoặc không tham dự.");
       attendingInputRef.current?.focus();
       return;
     }
@@ -267,6 +281,7 @@ export function RsvpExperience() {
   function beginChangedSubmission() {
     setError("");
     setSubmissionId(null);
+    setResumeSubmissionAfterVerification(false);
 
     if (step === "failure" && failureContext === "submission") {
       setStep("responding");
@@ -279,8 +294,10 @@ export function RsvpExperience() {
     setTypedName("");
     setVerificationToken("");
     setAttending(null);
+    setAttendanceError("");
     setMessage("");
     setSubmissionId(null);
+    setResumeSubmissionAfterVerification(false);
     setError("");
     setStep("selecting");
     setStatus("Hãy chọn ảnh của bạn.");
@@ -443,7 +460,11 @@ export function RsvpExperience() {
             Một lựa chọn ngắn thôi — còn những câu chuyện dài, mình để dành cho buổi tiệc.
           </p>
         </div>
-        <fieldset className="attendance-options">
+        <fieldset
+          aria-describedby={attendanceError ? "attendance-error" : undefined}
+          aria-invalid={attendanceError ? "true" : undefined}
+          className="attendance-options"
+        >
           <legend>Bạn có tham dự không?</legend>
           <label>
             <input
@@ -453,6 +474,7 @@ export function RsvpExperience() {
               name="attending"
               onChange={() => {
                 setAttending(true);
+                setAttendanceError("");
                 beginChangedSubmission();
               }}
               ref={attendingInputRef}
@@ -471,6 +493,7 @@ export function RsvpExperience() {
               name="attending"
               onChange={() => {
                 setAttending(false);
+                setAttendanceError("");
                 beginChangedSubmission();
               }}
               type="radio"
@@ -481,6 +504,9 @@ export function RsvpExperience() {
             </span>
           </label>
         </fieldset>
+        {attendanceError ? (
+          <FormError id="attendance-error">{attendanceError}</FormError>
+        ) : null}
         <div className="message-field">
           <label className="field-label" htmlFor="rsvp-message">
             Lời nhắn cho EcoBadminton <span>Không bắt buộc</span>
@@ -553,6 +579,7 @@ export function RsvpExperience() {
           type="button"
           onClick={() => {
             setSubmissionId(null);
+            setResumeSubmissionAfterVerification(false);
             setError("");
             setStep("responding");
             setStatus("Bạn có thể gửi một phản hồi mới.");

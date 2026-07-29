@@ -140,10 +140,18 @@ describe("RsvpExperience", () => {
     await verifyFirstGuest(user);
     await user.click(screen.getByRole("button", { name: /gửi phản hồi/i }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    const attendanceGroup = screen.getByRole("group", {
+      name: /bạn có tham dự không/i,
+    });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(
       /chọn tham dự hoặc không tham dự/i,
     );
-    expect(screen.getByRole("radio", { name: /^tham dự$/i })).toHaveFocus();
+    const attendingRadio = screen.getByRole("radio", { name: /^tham dự$/i });
+    expect(attendanceGroup.nextElementSibling).toBe(alert);
+    expect(attendanceGroup).toHaveAttribute("aria-describedby", alert.id);
+    expect(attendanceGroup).toHaveAttribute("aria-invalid", "true");
+    expect(attendingRadio).toHaveFocus();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -271,5 +279,53 @@ describe("RsvpExperience", () => {
     ) as { clientSubmissionId: string };
     expect(changedBody.clientSubmissionId).not.toBe(firstBody.clientSubmissionId);
     expect(randomUuid).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves the retry UUID when an expired token must be renewed", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+
+    render(<RsvpExperience />);
+    await verifyFirstGuest(user);
+    await user.click(screen.getByRole("radio", { name: /^tham dự$/i }));
+    fetchMock.mockRejectedValueOnce(new TypeError("Response lost"));
+    await user.click(screen.getByRole("button", { name: /gửi phản hồi/i }));
+
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse(
+        {
+          error: {
+            code: "INVALID_VERIFICATION_TOKEN",
+            message: "Verification is invalid or expired.",
+          },
+        },
+        { status: 401 },
+      ),
+    );
+    await user.click(await screen.findByRole("button", { name: /thử gửi lại/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/hết hạn/i);
+
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({ verificationToken: "renewed-token", guest: GUESTS[0] }),
+    );
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({ submission: SUBMISSION, deduplicated: true }),
+    );
+    await user.click(screen.getByRole("button", { name: /xác minh/i }));
+    await screen.findByText(/hẹn gặp bạn/i);
+
+    const firstBody = JSON.parse(
+      String(fetchMock.mock.calls[2]?.[1]?.body),
+    ) as { clientSubmissionId: string; verificationToken: string };
+    const expiredRetryBody = JSON.parse(
+      String(fetchMock.mock.calls[3]?.[1]?.body),
+    ) as { clientSubmissionId: string; verificationToken: string };
+    const renewedRetryBody = JSON.parse(
+      String(fetchMock.mock.calls[5]?.[1]?.body),
+    ) as { clientSubmissionId: string; verificationToken: string };
+    expect(expiredRetryBody.clientSubmissionId).toBe(firstBody.clientSubmissionId);
+    expect(renewedRetryBody.clientSubmissionId).toBe(firstBody.clientSubmissionId);
+    expect(renewedRetryBody.verificationToken).toBe("renewed-token");
+    expect(randomUuid).toHaveBeenCalledTimes(1);
   });
 });
