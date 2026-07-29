@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 
 import { readAdminSession } from "@/lib/admin-session";
 import { jsonError } from "@/lib/api-response";
+import { E2E_WORKER_HEADER } from "@/lib/e2e-mode";
 import { getAdminDashboard } from "@/lib/rsvp-repository";
 
-export async function GET() {
+export async function GET(request: Request) {
   let authenticated = false;
 
   try {
@@ -18,7 +19,9 @@ export async function GET() {
   }
 
   try {
-    const { summary, guests } = await getAdminDashboard();
+    const { summary, guests } = await getAdminDashboard(
+      request.headers.get(E2E_WORKER_HEADER) ?? undefined,
+    );
     return NextResponse.json({ summary, guests });
   } catch {
     return jsonError(500, "INTERNAL_ERROR", "Unable to load dashboard.");

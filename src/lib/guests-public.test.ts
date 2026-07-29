@@ -51,4 +51,15 @@ describe("public guests", () => {
     expect(findGuestById("guest-01")?.id).toBe("guest-01");
     expect(findGuestById("missing-guest")).toBeUndefined();
   });
+
+  it("keeps every full guest name out of the client RSVP source", () => {
+    const clientSource = readFileSync(
+      join(process.cwd(), "src/components/landing/rsvp-experience.tsx"),
+      "utf8",
+    );
+
+    for (const fixture of GUEST_FIXTURES) {
+      expect(clientSource).not.toContain(fixture.fullName);
+    }
+  });
 });

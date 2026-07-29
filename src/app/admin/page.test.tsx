@@ -5,6 +5,10 @@ import { readAdminSession } from "@/lib/admin-session";
 import { getAdminDashboard } from "@/lib/rsvp-repository";
 import AdminPage from "./page";
 
+const { headers } = vi.hoisted(() => ({ headers: vi.fn() }));
+
+vi.mock("next/headers", () => ({ headers }));
+
 vi.mock("@/lib/admin-session", () => ({
   readAdminSession: vi.fn(),
 }));
@@ -39,6 +43,7 @@ const DASHBOARD = {
 describe("AdminPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    headers.mockResolvedValue(new Headers({ "x-e2e-worker-id": "worker-9" }));
   });
 
   afterEach(cleanup);
@@ -60,6 +65,6 @@ describe("AdminPage", () => {
     render(await AdminPage());
 
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
-    expect(getAdminDashboard).toHaveBeenCalledOnce();
+    expect(getAdminDashboard).toHaveBeenCalledWith("worker-9");
   });
 });

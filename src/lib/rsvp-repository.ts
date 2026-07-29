@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import type { GuestRecord } from "@/data/guests";
 import { GUESTS } from "@/data/guests";
+import { getE2eRsvpPersistence } from "@/lib/e2e-rsvp-repository";
+import { isE2eMemoryRepositoryEnabled } from "@/lib/e2e-mode";
 import { rsvpMessageSchema } from "@/lib/rsvp-schema";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -366,14 +368,50 @@ const supabasePersistence: RsvpPersistenceAdapter = {
 
 const productionRepository = createRsvpRepository(supabasePersistence);
 
-export function createSubmission(input: CreateSubmissionInput) {
-  return productionRepository.createSubmission(input);
+type RepositoryEnvironment = {
+  NODE_ENV?: string;
+  E2E_REPOSITORY?: string;
+};
+
+type RepositorySelection<T> = {
+  environment: RepositoryEnvironment;
+  scope: string;
+  production: T;
+  createMemory: (scope: string) => T;
+};
+
+export function selectRsvpRepository<T>({
+  environment,
+  scope,
+  production,
+  createMemory,
+}: RepositorySelection<T>) {
+  return isE2eMemoryRepositoryEnabled(environment)
+    ? createMemory(scope)
+    : production;
 }
 
-export function createSubmissionWithMetadata(input: CreateSubmissionInput) {
-  return productionRepository.createSubmissionWithMetadata(input);
+function activeRepository(scope = "default") {
+  return selectRsvpRepository({
+    environment: process.env,
+    scope,
+    production: productionRepository,
+    createMemory: (memoryScope) =>
+      createRsvpRepository(getE2eRsvpPersistence(memoryScope)),
+  });
 }
 
-export function getAdminDashboard() {
-  return productionRepository.getAdminDashboard();
+export function createSubmission(input: CreateSubmissionInput, scope?: string) {
+  return activeRepository(scope).createSubmission(input);
+}
+
+export function createSubmissionWithMetadata(
+  input: CreateSubmissionInput,
+  scope?: string,
+) {
+  return activeRepository(scope).createSubmissionWithMetadata(input);
+}
+
+export function getAdminDashboard(scope?: string) {
+  return activeRepository(scope).getAdminDashboard();
 }

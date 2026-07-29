@@ -32,7 +32,10 @@ const SUBMISSION = {
 function request(body: unknown) {
   return new Request("http://localhost/api/rsvp", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "x-e2e-worker-id": "worker-7",
+    },
     body: JSON.stringify(body),
   });
 }
@@ -64,12 +67,15 @@ describe("POST /api/rsvp", () => {
       submission: SUBMISSION,
       deduplicated: false,
     });
-    expect(createSubmissionWithMetadata).toHaveBeenCalledWith({
-      guestId: "guest-07",
-      attending: true,
-      message: "See you there",
-      clientSubmissionId: CLIENT_SUBMISSION_ID,
-    });
+    expect(createSubmissionWithMetadata).toHaveBeenCalledWith(
+      {
+        guestId: "guest-07",
+        attending: true,
+        message: "See you there",
+        clientSubmissionId: CLIENT_SUBMISSION_ID,
+      },
+      "worker-7",
+    );
   });
 
   it.each(["invalid", "expired"])(

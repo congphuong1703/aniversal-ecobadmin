@@ -52,7 +52,9 @@ async function requestGuests() {
   const response = await fetch("/api/guests");
 
   if (!response.ok) {
-    throw new Error(await readError(response, "Không thể tải danh sách khách mời."));
+    throw new Error(
+      await readError(response, "Không thể tải danh sách khách mời."),
+    );
   }
 
   const body = (await response.json()) as { guests: readonly PublicGuest[] };
@@ -70,8 +72,10 @@ export function RsvpExperience() {
   const [message, setMessage] = useState("");
   const [submittedAttending, setSubmittedAttending] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
-  const [resumeSubmissionAfterVerification, setResumeSubmissionAfterVerification] =
-    useState(false);
+  const [
+    resumeSubmissionAfterVerification,
+    setResumeSubmissionAfterVerification,
+  ] = useState(false);
   const [failureContext, setFailureContext] =
     useState<FailureContext>("guests");
   const [error, setError] = useState("");
@@ -99,7 +103,9 @@ export function RsvpExperience() {
     } catch {
       setFailureContext("guests");
       setStep("failure");
-      setError("Không thể kết nối để tải danh sách khách mời. Vui lòng thử lại.");
+      setError(
+        "Không thể kết nối để tải danh sách khách mời. Vui lòng thử lại.",
+      );
       setStatus("Tải danh sách khách mời không thành công.");
     } finally {
       setIsLoadingGuests(false);
@@ -126,7 +132,9 @@ export function RsvpExperience() {
 
         setFailureContext("guests");
         setStep("failure");
-        setError("Không thể kết nối để tải danh sách khách mời. Vui lòng thử lại.");
+        setError(
+          "Không thể kết nối để tải danh sách khách mời. Vui lòng thử lại.",
+        );
         setStatus("Tải danh sách khách mời không thành công.");
       })
       .finally(() => {
@@ -336,7 +344,9 @@ export function RsvpExperience() {
         }}
       >
         <fieldset>
-          <legend className="sr-only">Chọn ảnh của bạn trong danh sách khách mời</legend>
+          <legend className="sr-only">
+            Chọn ảnh của bạn trong danh sách khách mời
+          </legend>
           <div className="guest-grid">
             {guests.map((guest, index) => (
               <label className="guest-card" key={guest.id}>
@@ -360,7 +370,9 @@ export function RsvpExperience() {
                   width={400}
                 />
                 <span className="guest-card-shade" />
-                <span className="guest-card-index">{String(index + 1).padStart(2, "0")}</span>
+                <span className="guest-card-index">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
                 <span className="guest-card-name">{guest.maskedName}</span>
               </label>
             ))}
@@ -407,7 +419,8 @@ export function RsvpExperience() {
             <span className="rsvp-kicker">Bước 02 · Xác minh</span>
             <h3 className="font-display">Đúng người, đúng cuộc hẹn.</h3>
             <p>
-              Nhập họ tên đầy đủ có dấu để chúng mình xác nhận riêng với danh sách nội bộ.
+              Nhập họ tên đầy đủ có dấu để chúng mình xác nhận riêng với danh
+              sách nội bộ.
             </p>
           </div>
           <label className="field-label" htmlFor="guest-name">
@@ -421,18 +434,28 @@ export function RsvpExperience() {
               setTypedName(event.target.value);
               setError("");
             }}
-            placeholder="Ví dụ: Nguyễn Văn An"
+            placeholder="Ví dụ: Họ tên của bạn"
             ref={nameInputRef}
             type="text"
             value={typedName}
           />
-          {error ? <FormError id="verification-error">{error}</FormError> : null}
+          {error ? (
+            <FormError id="verification-error">{error}</FormError>
+          ) : null}
           <div className="form-actions">
-            <button className="button-ghost" type="button" onClick={chooseAnotherGuest}>
+            <button
+              className="button-ghost"
+              type="button"
+              onClick={chooseAnotherGuest}
+            >
               Chọn lại ảnh
             </button>
             {failed ? (
-              <button className="button-primary" type="button" onClick={() => void verifyGuest()}>
+              <button
+                className="button-primary"
+                type="button"
+                onClick={() => void verifyGuest()}
+              >
                 Thử xác minh lại
               </button>
             ) : (
@@ -452,12 +475,16 @@ export function RsvpExperience() {
     const messageLength = [...message].length;
 
     return (
-      <form className="rsvp-panel rsvp-response rsvp-form" onSubmit={submitRsvp}>
+      <form
+        className="rsvp-panel rsvp-response rsvp-form"
+        onSubmit={submitRsvp}
+      >
         <div>
           <span className="rsvp-kicker">Bước 03 · Phản hồi</span>
           <h3 className="font-display">Bạn sẽ tham dự chứ?</h3>
           <p>
-            Một lựa chọn ngắn thôi — còn những câu chuyện dài, mình để dành cho buổi tiệc.
+            Một lựa chọn ngắn thôi — còn những câu chuyện dài, mình để dành cho
+            buổi tiệc.
           </p>
         </div>
         <fieldset
@@ -512,7 +539,9 @@ export function RsvpExperience() {
             Lời nhắn cho EcoBadminton <span>Không bắt buộc</span>
           </label>
           <textarea
-            aria-describedby={error ? "rsvp-error message-count" : "message-count"}
+            aria-describedby={
+              error ? "rsvp-error message-count" : "message-count"
+            }
             disabled={isSubmitting}
             id="rsvp-message"
             onChange={(event) => {
@@ -524,13 +553,21 @@ export function RsvpExperience() {
             rows={5}
             value={message}
           />
-          <span className={messageLength > MESSAGE_LIMIT ? "count-over" : ""} id="message-count">
+          <span
+            className={messageLength > MESSAGE_LIMIT ? "count-over" : ""}
+            id="message-count"
+          >
             {messageLength.toLocaleString("vi-VN")} / 1.000
           </span>
         </div>
         {error ? <FormError id="rsvp-error">{error}</FormError> : null}
         <div className="form-actions">
-          <button className="button-ghost" disabled={isSubmitting} type="button" onClick={() => setStep("verifying")}>
+          <button
+            className="button-ghost"
+            disabled={isSubmitting}
+            type="button"
+            onClick={() => setStep("verifying")}
+          >
             Quay lại
           </button>
           {failed ? (
@@ -542,7 +579,11 @@ export function RsvpExperience() {
               Thử gửi lại
             </button>
           ) : (
-            <button className="button-primary" disabled={isSubmitting} type="submit">
+            <button
+              className="button-primary"
+              disabled={isSubmitting}
+              type="submit"
+            >
               {isSubmitting ? "Đang gửi…" : "Gửi phản hồi"}
             </button>
           )}
@@ -554,7 +595,9 @@ export function RsvpExperience() {
   function renderSuccess() {
     return (
       <div className="rsvp-panel rsvp-success">
-        <span className="success-mark" aria-hidden="true">✓</span>
+        <span className="success-mark" aria-hidden="true">
+          ✓
+        </span>
         <span className="rsvp-kicker">Đã ghi nhận</span>
         <h3 className="font-display">Cảm ơn bạn.</h3>
         {submittedAttending ? (
@@ -562,17 +605,24 @@ export function RsvpExperience() {
             <p>
               Hẹn gặp bạn vào {EVENT.time} ngày {EVENT.date} tại {EVENT.venue}.
             </p>
-            <a className="button-primary" href={EVENT.mapUrl} rel="noreferrer" target="_blank">
+            <a
+              className="button-primary"
+              href={EVENT.mapUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
               Mở Google Maps <span aria-hidden="true">↗</span>
             </a>
           </>
         ) : (
           <p>
-            Cảm ơn bạn đã cho EcoBadminton biết. Tiếc một chút, nhưng lời chúc của bạn vẫn ở lại với đội.
+            Cảm ơn bạn đã cho EcoBadminton biết. Tiếc một chút, nhưng lời chúc
+            của bạn vẫn ở lại với đội.
           </p>
         )}
         <p className="success-note">
-          Nếu kế hoạch thay đổi, bạn có thể gửi lại. Mỗi phản hồi mới sẽ được lưu vào lịch sử.
+          Nếu kế hoạch thay đổi, bạn có thể gửi lại. Mỗi phản hồi mới sẽ được
+          lưu vào lịch sử.
         </p>
         <button
           className="button-ghost"
@@ -606,13 +656,17 @@ export function RsvpExperience() {
         <div className="section-heading reveal">
           <div>
             <span className="eyebrow">RSVP · 20 khách mời</span>
-            <h2 className="font-display" id="rsvp-title">Tìm mình trong đội hình.</h2>
+            <h2 className="font-display" id="rsvp-title">
+              Tìm mình trong đội hình.
+            </h2>
           </div>
           <p>
             Chọn ảnh của bạn, xác minh họ tên và để lại phản hồi trước buổi hẹn.
           </p>
         </div>
-        <p className="sr-only" aria-live="polite">{status}</p>
+        <p className="sr-only" aria-live="polite">
+          {status}
+        </p>
         <div className="reveal reveal-delay">
           {visibleStep === "selecting" ? renderSelecting() : null}
           {visibleStep === "verifying" ? renderVerification() : null}

@@ -27,6 +27,12 @@ const DASHBOARD = {
   ],
 };
 
+function request() {
+  return new Request("http://localhost/api/admin/dashboard", {
+    headers: { "x-e2e-worker-id": "worker-8" },
+  });
+}
+
 describe("GET /api/admin/dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +41,7 @@ describe("GET /api/admin/dashboard", () => {
   it("returns 401 without invoking the repository when the session is invalid", async () => {
     vi.mocked(readAdminSession).mockResolvedValue(false);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({
@@ -48,10 +54,10 @@ describe("GET /api/admin/dashboard", () => {
     vi.mocked(readAdminSession).mockResolvedValue(true);
     vi.mocked(getAdminDashboard).mockResolvedValue(DASHBOARD);
 
-    const response = await GET();
+    const response = await GET(request());
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(DASHBOARD);
-    expect(getAdminDashboard).toHaveBeenCalledOnce();
+    expect(getAdminDashboard).toHaveBeenCalledWith("worker-8");
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { GUEST_FIXTURES } from "@/test/fixtures";
 import { envSchema } from "./env";
@@ -8,6 +8,7 @@ import {
   insertSubmissionWithRaceRecovery,
   insertSubmissionWithRaceRecoveryMetadata,
   rsvpSubmissionRowSchema,
+  selectRsvpRepository,
   SubmissionIdConflictError,
   type RsvpPersistenceAdapter,
   type RsvpSubmissionInsert,
@@ -65,6 +66,32 @@ function makeRow(
 }
 
 describe("RSVP repository", () => {
+  it("selects memory only for explicit non-production E2E requests", () => {
+    const production = { name: "supabase" };
+    const memory = { name: "memory" };
+    const createMemory = vi.fn(() => memory);
+
+    expect(
+      selectRsvpRepository({
+        environment: { NODE_ENV: "production", E2E_REPOSITORY: "memory" },
+        scope: "worker-0",
+        production,
+        createMemory,
+      }),
+    ).toBe(production);
+    expect(createMemory).not.toHaveBeenCalled();
+
+    expect(
+      selectRsvpRepository({
+        environment: { NODE_ENV: "test", E2E_REPOSITORY: "memory" },
+        scope: "worker-0",
+        production,
+        createMemory,
+      }),
+    ).toBe(memory);
+    expect(createMemory).toHaveBeenCalledWith("worker-0");
+  });
+
   it("reports whether a submission was deduplicated without changing createSubmission", async () => {
     const memory = createMemoryAdapter();
     const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES);

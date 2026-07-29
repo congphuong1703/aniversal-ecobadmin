@@ -1,6 +1,9 @@
+import { headers } from "next/headers";
+
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AdminLogin } from "@/components/admin/admin-login";
 import { readAdminSession } from "@/lib/admin-session";
+import { E2E_WORKER_HEADER } from "@/lib/e2e-mode";
 import { getAdminDashboard } from "@/lib/rsvp-repository";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +21,9 @@ export default async function AdminPage() {
     return <AdminLogin />;
   }
 
-  const { summary, guests } = await getAdminDashboard();
+  const requestHeaders = await headers();
+  const { summary, guests } = await getAdminDashboard(
+    requestHeaders.get(E2E_WORKER_HEADER) ?? undefined,
+  );
   return <AdminDashboard guests={guests} summary={summary} />;
 }

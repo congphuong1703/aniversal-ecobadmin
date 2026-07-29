@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { jsonError, parseJson } from "@/lib/api-response";
+import { E2E_WORKER_HEADER } from "@/lib/e2e-mode";
 import {
   createSubmissionWithMetadata,
   SubmissionIdConflictError,
@@ -28,12 +29,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await createSubmissionWithMetadata({
-      guestId,
-      attending: parsed.data.attending,
-      message: parsed.data.message,
-      clientSubmissionId: parsed.data.clientSubmissionId,
-    });
+    const result = await createSubmissionWithMetadata(
+      {
+        guestId,
+        attending: parsed.data.attending,
+        message: parsed.data.message,
+        clientSubmissionId: parsed.data.clientSubmissionId,
+      },
+      request.headers.get(E2E_WORKER_HEADER) ?? undefined,
+    );
 
     return NextResponse.json(result);
   } catch (error) {
