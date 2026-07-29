@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { jsonError, parseJson } from "@/lib/api-response";
-import { createSubmissionWithMetadata } from "@/lib/rsvp-repository";
+import {
+  createSubmissionWithMetadata,
+  SubmissionIdConflictError,
+} from "@/lib/rsvp-repository";
 import { rsvpInputSchema } from "@/lib/rsvp-schema";
 import { verifyVerificationToken } from "@/lib/verification-token";
 
@@ -33,7 +36,15 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    if (error instanceof SubmissionIdConflictError) {
+      return jsonError(
+        409,
+        "SUBMISSION_ID_CONFLICT",
+        "Unable to save RSVP with this submission ID.",
+      );
+    }
+
     return jsonError(500, "INTERNAL_ERROR", "Unable to save RSVP.");
   }
 }

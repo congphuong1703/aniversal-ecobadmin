@@ -8,6 +8,7 @@ import {
   insertSubmissionWithRaceRecovery,
   insertSubmissionWithRaceRecoveryMetadata,
   rsvpSubmissionRowSchema,
+  SubmissionIdConflictError,
   type RsvpPersistenceAdapter,
   type RsvpSubmissionInsert,
   type RsvpSubmissionRow,
@@ -124,6 +125,35 @@ describe("RSVP repository", () => {
 
     expect(guest?.history).toHaveLength(2);
     expect(guest?.currentSubmission).toEqual(changedResponse);
+  });
+
+  it("rejects a pre-existing submission id owned by another guest", async () => {
+    const clientSubmissionId = "10000000-0000-4000-8000-000000000004";
+    const memory = createMemoryAdapter([
+      makeRow(
+        {
+          guest_id: "guest-01",
+          attending: false,
+          message: "Private response",
+          client_submission_id: clientSubmissionId,
+        },
+        {
+          id: "20000000-0000-4000-8000-000000000004",
+          created_at: "2026-07-29T00:00:00.000Z",
+        },
+      ),
+    ]);
+    const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES);
+
+    await expect(
+      repository.createSubmissionWithMetadata({
+        guestId: "guest-02",
+        attending: true,
+        message: "Different response",
+        clientSubmissionId,
+      }),
+    ).rejects.toBeInstanceOf(SubmissionIdConflictError);
+    expect(memory.insertCount).toBe(0);
   });
 
   it("rejects submissions for guests outside the static directory", async () => {
@@ -386,6 +416,35 @@ describe("RSVP repository", () => {
         async () => winner,
       ),
     ).resolves.toEqual({ row: winner, deduplicated: true });
+  });
+
+  it("rejects a uniqueness-race winner owned by another guest", async () => {
+    const input: RsvpSubmissionInsert = {
+      guest_id: "guest-02",
+      attending: true,
+      message: "Different response",
+      client_submission_id: "b0000000-0000-4000-8000-000000000011",
+    };
+    const winner = makeRow(
+      {
+        ...input,
+        guest_id: "guest-01",
+        attending: false,
+        message: "Private response",
+      },
+      {
+        id: "c0000000-0000-4000-8000-000000000011",
+        created_at: "2026-07-29T06:00:00.000Z",
+      },
+    );
+
+    await expect(
+      insertSubmissionWithRaceRecoveryMetadata(
+        input,
+        async () => ({ data: null, error: { code: "23505" } }),
+        async () => winner,
+      ),
+    ).rejects.toBeInstanceOf(SubmissionIdConflictError);
   });
 });
 

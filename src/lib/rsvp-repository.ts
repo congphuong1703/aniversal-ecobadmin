@@ -36,6 +36,13 @@ export type CreateSubmissionInput = {
   clientSubmissionId: string;
 };
 
+export class SubmissionIdConflictError extends Error {
+  constructor() {
+    super("Submission ID is already in use.");
+    this.name = "SubmissionIdConflictError";
+  }
+}
+
 export type AdminGuestRow = GuestRecord & {
   currentSubmission: RsvpSubmission | null;
   history: RsvpSubmission[];
@@ -156,6 +163,10 @@ export async function insertSubmissionWithRaceRecoveryMetadata(
     const existing = await findExisting(input.client_submission_id);
 
     if (existing) {
+      if (existing.guest_id !== input.guest_id) {
+        throw new SubmissionIdConflictError();
+      }
+
       return { row: existing, deduplicated: true };
     }
   }
@@ -213,6 +224,10 @@ export function createRsvpRepository(
     );
 
     if (existing) {
+      if (existing.guest_id !== input.guestId) {
+        throw new SubmissionIdConflictError();
+      }
+
       return { submission: mapSubmission(existing), deduplicated: true };
     }
 

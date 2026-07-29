@@ -2,13 +2,18 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createSubmissionWithMetadata } from "@/lib/rsvp-repository";
+import {
+  createSubmissionWithMetadata,
+  SubmissionIdConflictError,
+} from "@/lib/rsvp-repository";
 import { verifyVerificationToken } from "@/lib/verification-token";
 import { POST } from "./route";
 
-vi.mock("@/lib/rsvp-repository", () => ({
-  createSubmissionWithMetadata: vi.fn(),
-}));
+vi.mock("@/lib/rsvp-repository", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rsvp-repository")>();
+
+  return { ...actual, createSubmissionWithMetadata: vi.fn() };
+});
 
 vi.mock("@/lib/verification-token", () => ({
   verifyVerificationToken: vi.fn(),
@@ -120,5 +125,27 @@ describe("POST /api/rsvp", () => {
     });
     expect(verifyVerificationToken).not.toHaveBeenCalled();
     expect(createSubmissionWithMetadata).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic conflict without exposing another guest's submission", async () => {
+    vi.mocked(createSubmissionWithMetadata).mockRejectedValue(
+      new SubmissionIdConflictError(),
+    );
+
+    const response = await POST(request(validBody()));
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual({
+      error: {
+        code: "SUBMISSION_ID_CONFLICT",
+        message: "Unable to save RSVP with this submission ID.",
+      },
+    });
+    expect(serialized).not.toContain("guest-01");
+    expect(serialized).not.toContain("false");
+    expect(serialized).not.toContain("Private response");
+    expect(serialized).not.toContain("signed-token");
   });
 });
