@@ -6,7 +6,7 @@
 
 **Architecture:** Next.js App Router serves the public landing page, server-only guest data, JSON Route Handlers, and admin pages. Supabase stores append-only RSVP submissions; signed JWTs bind a verified guest to a short-lived RSVP session, while a separate signed cookie protects the admin dashboard.
 
-**Tech Stack:** Node 22.22.2, Next.js 16.2.12, React 19.2.8, TypeScript 6.0.2, Tailwind CSS 4.3.3, Zod 4.4.3, jose 6.2.4, Supabase JS 2.111.0, Vitest 4.1.10, Testing Library, Playwright 1.62.0.
+**Tech Stack:** Node 22.22.2, Next.js 16.2.12, React 19.2.8, TypeScript 6.0.3, Tailwind CSS 4.3.3, Zod 4.4.3, jose 6.2.4, Supabase JS 2.111.0, Vitest 4.1.10, Testing Library, Playwright 1.62.0.
 
 ## Global Constraints
 
@@ -20,8 +20,8 @@
 - Protect `/admin` with a shared password and an 8-hour signed `httpOnly` session cookie.
 - Deploy to Vercel and store RSVP history only in Supabase.
 - Follow TDD for domain logic, Route Handlers, and interactive UI behavior.
-- Use one TypeScript compiler package only: alias `typescript` to `@typescript/typescript6@6.0.2`, the newest release compatible with the Next.js ESLint toolchain.
-- Require Node.js `>=22.0.0` because the selected latest Supabase, jsdom, and Testing Library packages do not support Node 20.
+- Use one TypeScript compiler package only: `typescript@6.0.3`, the newest release compatible with the Next.js ESLint toolchain.
+- Require Node.js `>=22.22.2` because the selected latest Supabase, jsdom, and Testing Library packages do not support earlier Node 22 releases.
 
 ---
 
@@ -99,7 +99,7 @@ tests/e2e/
   "name": "ecobadminton-anniversary",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=22.0.0" },
+  "engines": { "node": ">=22.22.2" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -134,8 +134,7 @@ tests/e2e/
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
-    "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vite-tsconfig-paths": "6.1.1",
+    "typescript": "6.0.3",
     "vitest": "4.1.10"
   }
 }
@@ -151,7 +150,7 @@ Create `postcss.config.mjs`:
 export default { plugins: { "@tailwindcss/postcss": {} } };
 ```
 
-Create `tsconfig.json` with strict mode, `moduleResolution: "bundler"`, `jsx: "react-jsx"` as required by Next.js 16's automatic React runtime, the Next plugin, and the `@/*` alias. Configure Vitest for `jsdom`, `vitest.setup.ts`, React plugin, and TS paths. Configure Playwright to start `npm run dev` on port 3000.
+Create `tsconfig.json` with strict mode, `moduleResolution: "bundler"`, `jsx: "react-jsx"` as required by Next.js 16's automatic React runtime, the Next plugin, and the `@/*` alias. Configure Vitest for `jsdom`, `vitest.setup.ts`, React plugin, and an explicit `@` alias resolved with Node's `fileURLToPath`; do not install a TS-paths plugin. Configure Playwright to start `npm run dev` on port 3000.
 
 - [ ] **Step 3: Add the minimal app shell and Tailwind theme**
 
