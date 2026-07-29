@@ -151,7 +151,7 @@ Create `postcss.config.mjs`:
 export default { plugins: { "@tailwindcss/postcss": {} } };
 ```
 
-Create `tsconfig.json` with strict mode, `moduleResolution: "bundler"`, JSX preserve, Next plugin, and the `@/*` alias. Configure Vitest for `jsdom`, `vitest.setup.ts`, React plugin, and TS paths. Configure Playwright to start `npm run dev` on port 3000.
+Create `tsconfig.json` with strict mode, `moduleResolution: "bundler"`, `jsx: "react-jsx"` as required by Next.js 16's automatic React runtime, the Next plugin, and the `@/*` alias. Configure Vitest for `jsdom`, `vitest.setup.ts`, React plugin, and TS paths. Configure Playwright to start `npm run dev` on port 3000.
 
 - [ ] **Step 3: Add the minimal app shell and Tailwind theme**
 
