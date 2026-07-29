@@ -4,13 +4,14 @@ import { z } from "zod";
 
 import type { GuestRecord } from "@/data/guests";
 import { GUESTS } from "@/data/guests";
+import { rsvpMessageSchema } from "@/lib/rsvp-schema";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const rsvpSubmissionRowSchema = z.object({
   id: z.uuid(),
   guest_id: z.string().min(1).max(100),
   attending: z.boolean(),
-  message: z.string().max(1000).nullable(),
+  message: rsvpMessageSchema.nullable(),
   client_submission_id: z.uuid(),
   created_at: z.iso.datetime({ offset: true }),
 });
@@ -148,11 +149,29 @@ function mapSubmission(row: RsvpSubmissionRow): RsvpSubmission {
   };
 }
 
+function timestampToMicroseconds(timestamp: string) {
+  const match = /^(.*?)(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(timestamp);
+
+  if (!match) {
+    throw new Error(`Invalid timestamp: ${timestamp}`);
+  }
+
+  const [, wholeSecond, fraction = "", offset] = match;
+  const milliseconds = Date.parse(`${wholeSecond}${offset}`);
+  const microseconds = fraction.padEnd(6, "0").slice(0, 6);
+
+  return BigInt(milliseconds) * BigInt(1000) + BigInt(microseconds || "0");
+}
+
 function newestFirst(left: RsvpSubmissionRow, right: RsvpSubmissionRow) {
-  return (
-    Date.parse(right.created_at) - Date.parse(left.created_at) ||
-    right.id.localeCompare(left.id)
-  );
+  const leftTimestamp = timestampToMicroseconds(left.created_at);
+  const rightTimestamp = timestampToMicroseconds(right.created_at);
+
+  if (leftTimestamp !== rightTimestamp) {
+    return leftTimestamp > rightTimestamp ? -1 : 1;
+  }
+
+  return right.id.localeCompare(left.id);
 }
 
 export function createRsvpRepository(

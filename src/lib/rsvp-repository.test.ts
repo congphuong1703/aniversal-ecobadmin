@@ -233,6 +233,43 @@ describe("RSVP repository", () => {
     expect(guest?.currentSubmission?.attending).toBe(true);
   });
 
+  it("preserves PostgreSQL microseconds before using the id tie-breaker", async () => {
+    const memory = createMemoryAdapter([
+      makeRow(
+        {
+          guest_id: "guest-01",
+          attending: false,
+          message: null,
+          client_submission_id: "70000000-0000-4000-8000-000000000003",
+        },
+        {
+          id: "f0000000-0000-4000-8000-000000000001",
+          created_at: "2026-07-29T03:00:00.123456Z",
+        },
+      ),
+      makeRow(
+        {
+          guest_id: "guest-01",
+          attending: true,
+          message: null,
+          client_submission_id: "70000000-0000-4000-8000-000000000004",
+        },
+        {
+          id: "10000000-0000-4000-8000-000000000002",
+          created_at: "2026-07-29T03:00:00.123999Z",
+        },
+      ),
+    ]);
+    const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES);
+
+    const dashboard = await repository.getAdminDashboard();
+    const guest = dashboard.guests.find(({ id }) => id === "guest-01");
+
+    expect(guest?.currentSubmission?.createdAt).toBe(
+      "2026-07-29T03:00:00.123999Z",
+    );
+  });
+
   it("collects every persistence page using the last row as its cursor", async () => {
     const rows = [1, 2, 3, 4, 5].map((value) =>
       makeRow(
@@ -362,6 +399,43 @@ describe("RSVP boundaries", () => {
     expect(() =>
       loginInputSchema.parse({ password: "p".repeat(257) }),
     ).toThrow();
+  });
+
+  it("counts message limits in Unicode code points like PostgreSQL", () => {
+    const validInput = {
+      verificationToken: "signed-token",
+      attending: true,
+      message: "🙂".repeat(1000),
+      clientSubmissionId: "60000000-0000-4000-8000-000000000003",
+    };
+    const validRow = {
+      id: "c0000000-0000-4000-8000-000000000003",
+      guest_id: "guest-01",
+      attending: true,
+      message: validInput.message,
+      client_submission_id: validInput.clientSubmissionId,
+      created_at: "2026-07-29T06:00:00.000Z",
+    };
+
+    expect(rsvpInputSchema.parse(validInput).message).toBe(validInput.message);
+    expect(rsvpSubmissionRowSchema.parse(validRow).message).toBe(
+      validInput.message,
+    );
+    expect(
+      rsvpInputSchema.safeParse({
+        ...validInput,
+        message: "🙂".repeat(1001),
+      }).success,
+    ).toBe(false);
+    expect(
+      rsvpSubmissionRowSchema.safeParse({
+        ...validRow,
+        message: "🙂".repeat(1001),
+      }).success,
+    ).toBe(false);
+    expect(
+      rsvpInputSchema.parse({ ...validInput, message: null }).message,
+    ).toBe(null);
   });
 
   it("validates rows returned by external persistence", () => {

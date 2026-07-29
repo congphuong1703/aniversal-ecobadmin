@@ -1,5 +1,27 @@
 import { z } from "zod";
 
+function hasAtMostCodePoints(value: string, maximum: number) {
+  const codePoints = value[Symbol.iterator]();
+  let count = 0;
+
+  while (!codePoints.next().done) {
+    count += 1;
+
+    if (count > maximum) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export const rsvpMessageSchema = z
+  .string()
+  .refine(
+    (value) => hasAtMostCodePoints(value, 1000),
+    "Message must contain at most 1,000 characters.",
+  );
+
 export const verifyInputSchema = z
   .object({
     guestId: z.string().trim().min(1).max(100),
@@ -11,7 +33,7 @@ export const rsvpInputSchema = z
   .object({
     verificationToken: z.string().trim().min(1).max(4096),
     attending: z.boolean(),
-    message: z.string().max(1000).nullable().optional().default(null),
+    message: rsvpMessageSchema.nullable().optional().default(null),
     clientSubmissionId: z.uuid(),
   })
   .strict();
