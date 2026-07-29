@@ -6,7 +6,7 @@
 
 **Architecture:** Next.js App Router serves the public landing page, server-only guest data, JSON Route Handlers, and admin pages. Supabase stores append-only RSVP submissions; signed JWTs bind a verified guest to a short-lived RSVP session, while a separate signed cookie protects the admin dashboard.
 
-**Tech Stack:** Node 20.19.2, Next.js 16.2.12, React 19.2.8, TypeScript 7.0.2, Tailwind CSS 4.3.3, Zod 4.4.3, jose 6.2.4, Supabase JS 2.111.0, Vitest 4.1.10, Testing Library, Playwright 1.62.0.
+**Tech Stack:** Node 22.22.2, Next.js 16.2.12, React 19.2.8, TypeScript 6.0.2, Tailwind CSS 4.3.3, Zod 4.4.3, jose 6.2.4, Supabase JS 2.111.0, Vitest 4.1.10, Testing Library, Playwright 1.62.0.
 
 ## Global Constraints
 
@@ -20,6 +20,8 @@
 - Protect `/admin` with a shared password and an 8-hour signed `httpOnly` session cookie.
 - Deploy to Vercel and store RSVP history only in Supabase.
 - Follow TDD for domain logic, Route Handlers, and interactive UI behavior.
+- Use one TypeScript compiler package only: alias `typescript` to `@typescript/typescript6@6.0.2`, the newest release compatible with the Next.js ESLint toolchain.
+- Require Node.js `>=22.0.0` because the selected latest Supabase, jsdom, and Testing Library packages do not support Node 20.
 
 ---
 
@@ -97,7 +99,7 @@ tests/e2e/
   "name": "ecobadminton-anniversary",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=20.9.0" },
+  "engines": { "node": ">=22.0.0" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -132,7 +134,7 @@ tests/e2e/
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
-    "typescript": "7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite-tsconfig-paths": "6.1.1",
     "vitest": "4.1.10"
   }
