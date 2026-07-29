@@ -6,6 +6,7 @@ import {
   collectSubmissionPages,
   createRsvpRepository,
   insertSubmissionWithRaceRecovery,
+  insertSubmissionWithRaceRecoveryMetadata,
   rsvpSubmissionRowSchema,
   type RsvpPersistenceAdapter,
   type RsvpSubmissionInsert,
@@ -21,6 +22,16 @@ function createMemoryAdapter(initialRows: RsvpSubmissionRow[] = []) {
   const rows = [...initialRows];
   let insertCount = 0;
 
+  async function insertSubmission(input: RsvpSubmissionInsert) {
+    insertCount += 1;
+    const row = makeRow(input, {
+      id: `00000000-0000-4000-8000-${String(insertCount).padStart(12, "0")}`,
+      created_at: `2026-07-29T00:00:0${insertCount}.000Z`,
+    });
+    rows.push(row);
+    return row;
+  }
+
   const adapter: RsvpPersistenceAdapter = {
     async findByClientSubmissionId(clientSubmissionId) {
       return (
@@ -28,14 +39,9 @@ function createMemoryAdapter(initialRows: RsvpSubmissionRow[] = []) {
         null
       );
     },
-    async insertSubmission(input) {
-      insertCount += 1;
-      const row = makeRow(input, {
-        id: `00000000-0000-4000-8000-${String(insertCount).padStart(12, "0")}`,
-        created_at: `2026-07-29T00:00:0${insertCount}.000Z`,
-      });
-      rows.push(row);
-      return row;
+    insertSubmission,
+    async insertSubmissionWithMetadata(input) {
+      return { row: await insertSubmission(input), deduplicated: false };
     },
     async listSubmissions() {
       return [...rows];
@@ -58,6 +64,38 @@ function makeRow(
 }
 
 describe("RSVP repository", () => {
+  it("reports whether a submission was deduplicated without changing createSubmission", async () => {
+    const memory = createMemoryAdapter();
+    const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES);
+    const input = {
+      guestId: "guest-01",
+      attending: true,
+      message: null,
+      clientSubmissionId: "10000000-0000-4000-8000-000000000009",
+    };
+
+    await expect(
+      repository.createSubmissionWithMetadata(input),
+    ).resolves.toEqual({
+      submission: expect.objectContaining({
+        clientSubmissionId: input.clientSubmissionId,
+      }),
+      deduplicated: false,
+    });
+    await expect(
+      repository.createSubmissionWithMetadata(input),
+    ).resolves.toEqual({
+      submission: expect.objectContaining({
+        clientSubmissionId: input.clientSubmissionId,
+      }),
+      deduplicated: true,
+    });
+    await expect(repository.createSubmission(input)).resolves.toEqual(
+      expect.objectContaining({ clientSubmissionId: input.clientSubmissionId }),
+    );
+    expect(memory.insertCount).toBe(1);
+  });
+
   it("deduplicates retries but appends distinct intentional submissions", async () => {
     const memory = createMemoryAdapter();
     const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES);
@@ -327,6 +365,27 @@ describe("RSVP repository", () => {
 
     expect(result).toEqual(winner);
     expect(lookedUpIds).toEqual([input.client_submission_id]);
+  });
+
+  it("marks a uniqueness-race recovery as deduplicated", async () => {
+    const input: RsvpSubmissionInsert = {
+      guest_id: "guest-01",
+      attending: true,
+      message: null,
+      client_submission_id: "b0000000-0000-4000-8000-000000000010",
+    };
+    const winner = makeRow(input, {
+      id: "c0000000-0000-4000-8000-000000000010",
+      created_at: "2026-07-29T06:00:00.000Z",
+    });
+
+    await expect(
+      insertSubmissionWithRaceRecoveryMetadata(
+        input,
+        async () => ({ data: null, error: { code: "23505" } }),
+        async () => winner,
+      ),
+    ).resolves.toEqual({ row: winner, deduplicated: true });
   });
 });
 

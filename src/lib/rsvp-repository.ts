@@ -58,11 +58,17 @@ export type RsvpPersistenceAdapter = {
     clientSubmissionId: string,
   ): Promise<RsvpSubmissionRow | null>;
   insertSubmission(input: RsvpSubmissionInsert): Promise<RsvpSubmissionRow>;
+  insertSubmissionWithMetadata(
+    input: RsvpSubmissionInsert,
+  ): Promise<{ row: RsvpSubmissionRow; deduplicated: boolean }>;
   listSubmissions(): Promise<readonly RsvpSubmissionRow[]>;
 };
 
 export type RsvpRepository = {
   createSubmission(input: CreateSubmissionInput): Promise<RsvpSubmission>;
+  createSubmissionWithMetadata(
+    input: CreateSubmissionInput,
+  ): Promise<{ submission: RsvpSubmission; deduplicated: boolean }>;
   getAdminDashboard(): Promise<AdminDashboard>;
 };
 
@@ -121,17 +127,36 @@ export async function insertSubmissionWithRaceRecovery(
     clientSubmissionId: string,
   ) => Promise<RsvpSubmissionRow | null>,
 ): Promise<RsvpSubmissionRow> {
+  const result = await insertSubmissionWithRaceRecoveryMetadata(
+    input,
+    insert,
+    findExisting,
+  );
+
+  return result.row;
+}
+
+export async function insertSubmissionWithRaceRecoveryMetadata(
+  input: RsvpSubmissionInsert,
+  insert: () => Promise<InsertSubmissionResult>,
+  findExisting: (
+    clientSubmissionId: string,
+  ) => Promise<RsvpSubmissionRow | null>,
+): Promise<{ row: RsvpSubmissionRow; deduplicated: boolean }> {
   const { data, error } = await insert();
 
   if (!error && data) {
-    return rsvpSubmissionRowSchema.parse(data);
+    return {
+      row: rsvpSubmissionRowSchema.parse(data),
+      deduplicated: false,
+    };
   }
 
   if (errorCode(error) === "23505") {
     const existing = await findExisting(input.client_submission_id);
 
     if (existing) {
-      return existing;
+      return { row: existing, deduplicated: true };
     }
   }
 
@@ -178,29 +203,39 @@ export function createRsvpRepository(
   persistence: RsvpPersistenceAdapter,
   guests: readonly GuestRecord[] = GUESTS,
 ): RsvpRepository {
+  async function createSubmissionWithMetadata(input: CreateSubmissionInput) {
+    if (!guests.some(({ id }) => id === input.guestId)) {
+      throw new Error(`Unknown guest ID: ${input.guestId}`);
+    }
+
+    const existing = await persistence.findByClientSubmissionId(
+      input.clientSubmissionId,
+    );
+
+    if (existing) {
+      return { submission: mapSubmission(existing), deduplicated: true };
+    }
+
+    const insert = {
+      guest_id: input.guestId,
+      attending: input.attending,
+      message: input.message ?? null,
+      client_submission_id: input.clientSubmissionId,
+    };
+    const result = await persistence.insertSubmissionWithMetadata(insert);
+
+    return {
+      submission: mapSubmission(result.row),
+      deduplicated: result.deduplicated,
+    };
+  }
+
   return {
     async createSubmission(input) {
-      if (!guests.some(({ id }) => id === input.guestId)) {
-        throw new Error(`Unknown guest ID: ${input.guestId}`);
-      }
-
-      const existing = await persistence.findByClientSubmissionId(
-        input.clientSubmissionId,
-      );
-
-      if (existing) {
-        return mapSubmission(existing);
-      }
-
-      const created = await persistence.insertSubmission({
-        guest_id: input.guestId,
-        attending: input.attending,
-        message: input.message ?? null,
-        client_submission_id: input.clientSubmissionId,
-      });
-
-      return mapSubmission(created);
+      return (await createSubmissionWithMetadata(input)).submission;
     },
+
+    createSubmissionWithMetadata,
 
     async getAdminDashboard() {
       const rowsByGuestId = new Map<string, RsvpSubmissionRow[]>();
@@ -246,37 +281,45 @@ function persistenceError(operation: string, cause: unknown) {
   return new Error(`Unable to ${operation} RSVP submissions.`, { cause });
 }
 
+async function findProductionSubmission(clientSubmissionId: string) {
+  const { data, error } = await getSupabaseServerClient()
+    .from("rsvp_submissions")
+    .select(
+      "id, guest_id, attending, message, client_submission_id, created_at",
+    )
+    .eq("client_submission_id", clientSubmissionId)
+    .maybeSingle();
+
+  if (error) {
+    throw persistenceError("read", error);
+  }
+
+  return data ? rsvpSubmissionRowSchema.parse(data) : null;
+}
+
+function insertProductionSubmission(input: RsvpSubmissionInsert) {
+  return insertSubmissionWithRaceRecoveryMetadata(
+    input,
+    async () =>
+      getSupabaseServerClient()
+        .from("rsvp_submissions")
+        .insert(input)
+        .select(
+          "id, guest_id, attending, message, client_submission_id, created_at",
+        )
+        .single(),
+    findProductionSubmission,
+  );
+}
+
 const supabasePersistence: RsvpPersistenceAdapter = {
-  async findByClientSubmissionId(clientSubmissionId) {
-    const { data, error } = await getSupabaseServerClient()
-      .from("rsvp_submissions")
-      .select(
-        "id, guest_id, attending, message, client_submission_id, created_at",
-      )
-      .eq("client_submission_id", clientSubmissionId)
-      .maybeSingle();
-
-    if (error) {
-      throw persistenceError("read", error);
-    }
-
-    return data ? rsvpSubmissionRowSchema.parse(data) : null;
-  },
+  findByClientSubmissionId: findProductionSubmission,
 
   async insertSubmission(input) {
-    return insertSubmissionWithRaceRecovery(
-      input,
-      async () =>
-        getSupabaseServerClient()
-          .from("rsvp_submissions")
-          .insert(input)
-          .select(
-            "id, guest_id, attending, message, client_submission_id, created_at",
-          )
-          .single(),
-      (clientSubmissionId) => this.findByClientSubmissionId(clientSubmissionId),
-    );
+    return (await insertProductionSubmission(input)).row;
   },
+
+  insertSubmissionWithMetadata: insertProductionSubmission,
 
   async listSubmissions() {
     return collectSubmissionPages(async (cursor, pageSize) => {
@@ -310,6 +353,10 @@ const productionRepository = createRsvpRepository(supabasePersistence);
 
 export function createSubmission(input: CreateSubmissionInput) {
   return productionRepository.createSubmission(input);
+}
+
+export function createSubmissionWithMetadata(input: CreateSubmissionInput) {
+  return productionRepository.createSubmissionWithMetadata(input);
 }
 
 export function getAdminDashboard() {
