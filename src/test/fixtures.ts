@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { GuestRecord } from "@/data/guests";
 
 export const GUEST_FIXTURES = [
