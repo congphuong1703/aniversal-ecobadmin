@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title">
+  <title id="title">Development guest portrait 13</title>
+  <rect width="800" height="1000" fill="#f0e2ff"/>
+  <circle cx="650" cy="175" r="188" fill="#c5a0e9"/>
+  <path d="M98 900c46-236 184-355 302-355s256 119 302 355" fill="#67379a"/>
+  <circle cx="400" cy="360" r="170" fill="#e5b28b"/>
+  <path d="M225 370c0-169 70-258 180-258 118 0 179 93 179 252-50-64-114-98-190-98-68 0-125 35-169 104z" fill="#4b2a3d"/>
+  <text x="70" y="100" fill="#67379a" font-family="sans-serif" font-size="52" font-weight="700">13</text>
+</svg>
