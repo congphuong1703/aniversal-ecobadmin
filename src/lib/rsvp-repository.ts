@@ -1,17 +1,21 @@
 import "server-only";
 
+import { z } from "zod";
+
 import type { GuestRecord } from "@/data/guests";
 import { GUESTS } from "@/data/guests";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-export type RsvpSubmissionRow = {
-  id: string;
-  guest_id: string;
-  attending: boolean;
-  message: string | null;
-  client_submission_id: string;
-  created_at: string;
-};
+export const rsvpSubmissionRowSchema = z.object({
+  id: z.uuid(),
+  guest_id: z.string().min(1).max(100),
+  attending: z.boolean(),
+  message: z.string().max(1000).nullable(),
+  client_submission_id: z.uuid(),
+  created_at: z.iso.datetime({ offset: true }),
+});
+
+export type RsvpSubmissionRow = z.infer<typeof rsvpSubmissionRowSchema>;
 
 export type RsvpSubmissionInsert = Omit<RsvpSubmissionRow, "id" | "created_at">;
 
@@ -60,6 +64,78 @@ export type RsvpRepository = {
   createSubmission(input: CreateSubmissionInput): Promise<RsvpSubmission>;
   getAdminDashboard(): Promise<AdminDashboard>;
 };
+
+export type SubmissionCursor = {
+  createdAt: string;
+  id: string;
+};
+
+export type SubmissionPageLoader = (
+  cursor: SubmissionCursor | null,
+  pageSize: number,
+) => Promise<readonly RsvpSubmissionRow[]>;
+
+export async function collectSubmissionPages(
+  loadPage: SubmissionPageLoader,
+  pageSize = 1000,
+): Promise<RsvpSubmissionRow[]> {
+  const rows: RsvpSubmissionRow[] = [];
+  let cursor: SubmissionCursor | null = null;
+
+  while (true) {
+    const page = await loadPage(cursor, pageSize);
+    rows.push(...page);
+
+    if (page.length < pageSize) {
+      return rows;
+    }
+
+    const lastRow = page.at(-1);
+
+    if (!lastRow) {
+      return rows;
+    }
+
+    cursor = { createdAt: lastRow.created_at, id: lastRow.id };
+  }
+}
+
+type InsertSubmissionResult = {
+  data: unknown;
+  error: unknown;
+};
+
+function errorCode(error: unknown) {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined;
+  }
+
+  return typeof error.code === "string" ? error.code : undefined;
+}
+
+export async function insertSubmissionWithRaceRecovery(
+  input: RsvpSubmissionInsert,
+  insert: () => Promise<InsertSubmissionResult>,
+  findExisting: (
+    clientSubmissionId: string,
+  ) => Promise<RsvpSubmissionRow | null>,
+): Promise<RsvpSubmissionRow> {
+  const { data, error } = await insert();
+
+  if (!error && data) {
+    return rsvpSubmissionRowSchema.parse(data);
+  }
+
+  if (errorCode(error) === "23505") {
+    const existing = await findExisting(input.client_submission_id);
+
+    if (existing) {
+      return existing;
+    }
+  }
+
+  throw persistenceError("create", error);
+}
 
 function mapSubmission(row: RsvpSubmissionRow): RsvpSubmission {
   return {
@@ -165,49 +241,49 @@ const supabasePersistence: RsvpPersistenceAdapter = {
       throw persistenceError("read", error);
     }
 
-    return data as RsvpSubmissionRow | null;
+    return data ? rsvpSubmissionRowSchema.parse(data) : null;
   },
 
   async insertSubmission(input) {
-    const { data, error } = await getSupabaseServerClient()
-      .from("rsvp_submissions")
-      .insert(input)
-      .select(
-        "id, guest_id, attending, message, client_submission_id, created_at",
-      )
-      .single();
-
-    if (!error && data) {
-      return data as RsvpSubmissionRow;
-    }
-
-    if (error?.code === "23505") {
-      const existing = await this.findByClientSubmissionId(
-        input.client_submission_id,
-      );
-
-      if (existing) {
-        return existing;
-      }
-    }
-
-    throw persistenceError("create", error);
+    return insertSubmissionWithRaceRecovery(
+      input,
+      async () =>
+        getSupabaseServerClient()
+          .from("rsvp_submissions")
+          .insert(input)
+          .select(
+            "id, guest_id, attending, message, client_submission_id, created_at",
+          )
+          .single(),
+      (clientSubmissionId) => this.findByClientSubmissionId(clientSubmissionId),
+    );
   },
 
   async listSubmissions() {
-    const { data, error } = await getSupabaseServerClient()
-      .from("rsvp_submissions")
-      .select(
-        "id, guest_id, attending, message, client_submission_id, created_at",
-      )
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false });
+    return collectSubmissionPages(async (cursor, pageSize) => {
+      let query = getSupabaseServerClient()
+        .from("rsvp_submissions")
+        .select(
+          "id, guest_id, attending, message, client_submission_id, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(pageSize);
 
-    if (error) {
-      throw persistenceError("list", error);
-    }
+      if (cursor) {
+        query = query.or(
+          `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+        );
+      }
 
-    return (data ?? []) as RsvpSubmissionRow[];
+      const { data, error } = await query;
+
+      if (error) {
+        throw persistenceError("list", error);
+      }
+
+      return z.array(rsvpSubmissionRowSchema).parse(data ?? []);
+    });
   },
 };
 

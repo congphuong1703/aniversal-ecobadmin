@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { GUEST_FIXTURES } from "@/test/fixtures";
 import { envSchema } from "./env";
 import {
+  collectSubmissionPages,
   createRsvpRepository,
+  insertSubmissionWithRaceRecovery,
+  rsvpSubmissionRowSchema,
   type RsvpPersistenceAdapter,
   type RsvpSubmissionInsert,
   type RsvpSubmissionRow,
@@ -229,6 +232,65 @@ describe("RSVP repository", () => {
 
     expect(guest?.currentSubmission?.attending).toBe(true);
   });
+
+  it("collects every persistence page using the last row as its cursor", async () => {
+    const rows = [1, 2, 3, 4, 5].map((value) =>
+      makeRow(
+        {
+          guest_id: "guest-01",
+          attending: true,
+          message: null,
+          client_submission_id: `90000000-0000-4000-8000-${String(value).padStart(12, "0")}`,
+        },
+        {
+          id: `a0000000-0000-4000-8000-${String(value).padStart(12, "0")}`,
+          created_at: `2026-07-29T05:00:0${6 - value}.000Z`,
+        },
+      ),
+    );
+    const seenCursors: Array<{ createdAt: string; id: string } | null> = [];
+
+    const collected = await collectSubmissionPages(async (cursor, pageSize) => {
+      seenCursors.push(cursor);
+      const start = cursor
+        ? rows.findIndex(({ id }) => id === cursor.id) + 1
+        : 0;
+      return rows.slice(start, start + pageSize);
+    }, 2);
+
+    expect(collected).toEqual(rows);
+    expect(seenCursors).toEqual([
+      null,
+      { createdAt: rows[1].created_at, id: rows[1].id },
+      { createdAt: rows[3].created_at, id: rows[3].id },
+    ]);
+  });
+
+  it("recovers the winning row after an insert uniqueness race", async () => {
+    const input: RsvpSubmissionInsert = {
+      guest_id: "guest-01",
+      attending: true,
+      message: null,
+      client_submission_id: "b0000000-0000-4000-8000-000000000001",
+    };
+    const winner = makeRow(input, {
+      id: "c0000000-0000-4000-8000-000000000001",
+      created_at: "2026-07-29T06:00:00.000Z",
+    });
+    const lookedUpIds: string[] = [];
+
+    const result = await insertSubmissionWithRaceRecovery(
+      input,
+      async () => ({ data: null, error: { code: "23505" } }),
+      async (clientSubmissionId) => {
+        lookedUpIds.push(clientSubmissionId);
+        return winner;
+      },
+    );
+
+    expect(result).toEqual(winner);
+    expect(lookedUpIds).toEqual([input.client_submission_id]);
+  });
 });
 
 describe("RSVP boundaries", () => {
@@ -252,11 +314,14 @@ describe("RSVP boundaries", () => {
 
   it("validates verify, RSVP, and login request bodies", () => {
     expect(
-      verifyInputSchema.parse({ guestId: "guest-01", name: " Nguyễn Văn An " }),
+      verifyInputSchema.parse({
+        guestId: " guest-01 ",
+        name: " Nguyễn Văn An ",
+      }),
     ).toEqual({ guestId: "guest-01", name: "Nguyễn Văn An" });
     expect(
       rsvpInputSchema.parse({
-        verificationToken: "signed-token",
+        verificationToken: " signed-token ",
         attending: false,
         message: null,
         clientSubmissionId: "60000000-0000-4000-8000-000000000001",
@@ -276,6 +341,44 @@ describe("RSVP boundaries", () => {
         attending: true,
         message: "x".repeat(1001),
         clientSubmissionId: "not-a-uuid",
+      }),
+    ).toThrow();
+  });
+
+  it("bounds non-message request strings", () => {
+    expect(() =>
+      verifyInputSchema.parse({ guestId: "g".repeat(101), name: "Guest" }),
+    ).toThrow();
+    expect(() =>
+      verifyInputSchema.parse({ guestId: "guest-01", name: "n".repeat(201) }),
+    ).toThrow();
+    expect(() =>
+      rsvpInputSchema.parse({
+        verificationToken: "t".repeat(4097),
+        attending: true,
+        clientSubmissionId: "60000000-0000-4000-8000-000000000002",
+      }),
+    ).toThrow();
+    expect(() =>
+      loginInputSchema.parse({ password: "p".repeat(257) }),
+    ).toThrow();
+  });
+
+  it("validates rows returned by external persistence", () => {
+    const validRow = {
+      id: "c0000000-0000-4000-8000-000000000002",
+      guest_id: "guest-01",
+      attending: true,
+      message: null,
+      client_submission_id: "b0000000-0000-4000-8000-000000000002",
+      created_at: "2026-07-29T06:00:00.000Z",
+    };
+
+    expect(rsvpSubmissionRowSchema.parse(validRow)).toEqual(validRow);
+    expect(() =>
+      rsvpSubmissionRowSchema.parse({
+        ...validRow,
+        created_at: "not-a-timestamp",
       }),
     ).toThrow();
   });
