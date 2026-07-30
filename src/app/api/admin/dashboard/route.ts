@@ -1,29 +1,48 @@
 import { NextResponse } from "next/server";
 
-import { readAdminSession } from "@/lib/admin-session";
+import { readAdminSessionMetadata } from "@/lib/admin-session";
+import { adminSessionRemainingMs } from "@/lib/admin-session-contract";
 import { jsonError } from "@/lib/api-response";
 import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 import { getAdminDashboard } from "@/lib/rsvp-repository";
 
-export async function GET(request: Request) {
-  let authenticated = false;
-
+async function readSessionFailClosed() {
   try {
-    authenticated = await readAdminSession();
+    return await readAdminSessionMetadata();
   } catch {
     // Session failures are indistinguishable from an invalid session.
+    return null;
   }
+}
 
-  if (!authenticated) {
+export async function GET(request: Request) {
+  const initialSession = await readSessionFailClosed();
+
+  if (!initialSession) {
     return jsonError(401, "UNAUTHORIZED", "Unauthorized.");
   }
 
+  let dashboard;
+
   try {
-    const { summary, guests } = await getAdminDashboard(
+    dashboard = await getAdminDashboard(
       normalizeE2eWorkerScope(request.headers.get(E2E_WORKER_HEADER)),
     );
-    return NextResponse.json({ summary, guests });
   } catch {
     return jsonError(500, "INTERNAL_ERROR", "Unable to load dashboard.");
   }
+
+  const renderSession = await readSessionFailClosed();
+  const remainingMs = renderSession
+    ? adminSessionRemainingMs(renderSession)
+    : null;
+
+  if (remainingMs === null) {
+    return jsonError(401, "UNAUTHORIZED", "Unauthorized.");
+  }
+
+  return NextResponse.json(
+    { authenticated: true, remainingMs, ...dashboard },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

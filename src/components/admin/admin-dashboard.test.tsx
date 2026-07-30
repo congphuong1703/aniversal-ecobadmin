@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AdminGuestRow, DashboardSummary } from "@/lib/rsvp-repository";
@@ -23,11 +24,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => router,
 }));
 
-const SESSION_EXPIRES_AT = Date.parse("2050-07-29T10:00:00.000Z") / 1000;
-const SESSION_SERVER_TIME = Date.parse("2050-07-29T09:00:00.000Z");
-const EXPIRING_SESSION_EXPIRES_AT =
-  Date.parse("2026-07-29T10:00:00.000Z") / 1000;
-const EXPIRING_SESSION_SERVER_TIME = Date.parse("2026-07-29T09:59:59.000Z");
+const SESSION_CONFIRMATION_TIMEOUT_MS = 5_000;
 
 const SUMMARY: DashboardSummary = {
   total: 2,
@@ -79,6 +76,43 @@ const GUESTS: AdminGuestRow[] = [
 
 const fetchMock = vi.fn<typeof fetch>();
 
+function sessionResponse(remainingMs = 60_000) {
+  return new Response(
+    JSON.stringify({ authenticated: true, remainingMs }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function dashboardResponse(
+  remainingMs = 60_000,
+  summary = SUMMARY,
+  guests = GUESTS,
+) {
+  return new Response(
+    JSON.stringify({ authenticated: true, remainingMs, summary, guests }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function renderDashboard() {
+  return render(<AdminDashboard />);
+}
+
+async function renderConfirmedDashboard(remainingMs = 60_000) {
+  fetchMock.mockResolvedValueOnce(dashboardResponse(remainingMs));
+  renderDashboard();
+  expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+}
+
+async function flushAsyncWork() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 describe("AdminDashboard", () => {
   beforeEach(() => {
     fetchMock.mockReset();
@@ -93,15 +127,8 @@ describe("AdminDashboard", () => {
     vi.useRealTimers();
   });
 
-  it("renders all summary values, the latest RSVP, and pending guests in a semantic table", () => {
-    render(
-      <AdminDashboard
-        sessionExpiresAt={SESSION_EXPIRES_AT}
-        sessionServerTime={SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
+  it("renders all summary values, the latest RSVP, and pending guests after confirmation", async () => {
+    await renderConfirmedDashboard();
 
     const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
     expect(table).toBeInTheDocument();
@@ -117,14 +144,7 @@ describe("AdminDashboard", () => {
 
   it("opens newest-first full history with optional comments by keyboard", async () => {
     const user = userEvent.setup();
-    render(
-      <AdminDashboard
-        sessionExpiresAt={SESSION_EXPIRES_AT}
-        sessionServerTime={SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
+    await renderConfirmedDashboard();
 
     const disclosure = screen.getByRole("button", {
       name: /xem lịch sử.*nguyễn văn an/i,
@@ -170,13 +190,11 @@ describe("AdminDashboard", () => {
       createdAt: "2026-09-17T12:30:00.123456Z",
     };
     const user = userEvent.setup();
-
-    render(
-      <AdminDashboard
-        sessionExpiresAt={SESSION_EXPIRES_AT}
-        sessionServerTime={SESSION_SERVER_TIME}
-        summary={{ total: 1, attending: 0, declined: 1, pending: 0 }}
-        guests={[
+    fetchMock.mockResolvedValueOnce(
+      dashboardResponse(
+        60_000,
+        { total: 1, attending: 0, declined: 1, pending: 0 },
+        [
           {
             id: "guest-precision",
             fullName: "Nguyễn Vi Giây",
@@ -184,9 +202,12 @@ describe("AdminDashboard", () => {
             currentSubmission: newest,
             history: [newest, older],
           },
-        ]}
-      />,
+        ],
+      ),
     );
+    renderDashboard();
+
+    expect(await screen.findByText("Nguyễn Vi Giây")).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: /xem lịch sử.*nguyễn vi giây/i }),
@@ -201,20 +222,115 @@ describe("AdminDashboard", () => {
     expect(entries[1]).toHaveTextContent("Phản hồi cũ hơn");
   });
 
-  it("clears private data before a successful logout refresh completes", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ authenticated: false }), { status: 200 }),
+  it("renders neutral server HTML so hydration delay never exposes private data", () => {
+    const html = renderToString(<AdminDashboard />);
+
+    expect(html).toContain("Đang kiểm tra phiên quản trị");
+    expect(html).not.toContain("Nguyễn Văn An");
+    expect(html).not.toContain("Mình có lịch công tác.");
+  });
+
+  it("requires initial server confirmation before private data appears", async () => {
+    let resolveConfirmation!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveConfirmation = resolve;
+      }),
     );
+
+    renderDashboard();
+
+    expect(screen.getByText(/đang kiểm tra phiên quản trị/i)).toBeInTheDocument();
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveConfirmation(dashboardResponse());
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/dashboard",
+      expect.objectContaining({
+        cache: "no-store",
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  it("subtracts response delay from the server-authorized remaining lifetime", async () => {
+    vi.useFakeTimers();
+    let resolveConfirmation!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveConfirmation = resolve;
+      }),
+    );
+    renderDashboard();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(750);
+    });
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+
+    resolveConfirmation(dashboardResponse(1_000));
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(249);
+    });
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/admin");
+  });
+
+  it("keeps private data hidden when delayed hydration confirms an expired session", async () => {
+    vi.useFakeTimers();
+    let resolveConfirmation!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveConfirmation = resolve;
+      }),
+    );
+    renderDashboard();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+
+    resolveConfirmation(
+      new Response(
+        JSON.stringify({
+          error: { code: "UNAUTHORIZED", message: "Unauthorized." },
+        }),
+        { status: 401 },
+      ),
+    );
+    await flushAsyncWork();
+
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/admin");
+  });
+
+  it("clears private data before a successful logout refresh completes", async () => {
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ authenticated: false }), { status: 200 }),
+      );
     refresh.mockReturnValue(new Promise<void>(() => {}));
     const user = userEvent.setup();
-    render(
-      <AdminDashboard
-        sessionExpiresAt={SESSION_EXPIRES_AT}
-        sessionServerTime={SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
+    renderDashboard();
+
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: /xem lịch sử.*nguyễn văn an/i }),
@@ -233,89 +349,197 @@ describe("AdminDashboard", () => {
     });
   });
 
-  it("unmounts private data at the exact session boundary before navigating", async () => {
+  it.each(["focus", "visibilitychange"])(
+    "hides private data before invalid %s revalidation completes",
+    async (eventName) => {
+      let sessionChecks = 0;
+      fetchMock.mockImplementation(() => {
+        sessionChecks += 1;
+
+        if (sessionChecks === 1) {
+          return Promise.resolve(dashboardResponse());
+        }
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: { code: "UNAUTHORIZED", message: "Unauthorized." },
+            }),
+            { status: 401 },
+          ),
+        );
+      });
+      const visibility = vi
+        .spyOn(document, "visibilityState", "get")
+        .mockReturnValue("visible");
+      renderDashboard();
+      expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+
+      act(() => {
+        if (eventName === "focus") {
+          window.dispatchEvent(new Event(eventName));
+        } else {
+          document.dispatchEvent(new Event(eventName));
+        }
+      });
+
+      expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+      await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin"));
+      visibility.mockRestore();
+    },
+  );
+
+  it("fails a hung resume confirmation closed after the bounded timeout", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-29T09:59:59.000Z"));
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockReturnValueOnce(new Promise<Response>(() => {}));
     replace.mockImplementation(() => {
       expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
-      expect(
-        screen.queryByText("Mình có lịch công tác."),
-      ).not.toBeInTheDocument();
     });
-    render(
-      <AdminDashboard
-        sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
-        sessionServerTime={EXPIRING_SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
-
+    renderDashboard();
+    await flushAsyncWork();
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(999);
+      await vi.advanceTimersByTimeAsync(SESSION_CONFIRMATION_TIMEOUT_MS - 1);
+    });
+    expect(replace).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(replace).toHaveBeenCalledWith("/admin");
+  });
+
+  it("fails malformed successful confirmation responses closed", async () => {
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ authenticated: true }), { status: 200 }),
+      );
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin"));
+  });
+
+  it("re-anchors expiry to fresh server remaining time after resume", async () => {
+    vi.useFakeTimers();
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse(1_000))
+      .mockResolvedValueOnce(sessionResponse(5_000));
+    renderDashboard();
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_999);
     });
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
-
     expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Mình có lịch công tác."),
-    ).not.toBeInTheDocument();
     expect(replace).toHaveBeenCalledWith("/admin");
-    expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it("uses server time for the initial duration when the client clock is behind", async () => {
+  it("subtracts wall elapsed when the monotonic clock pauses during confirmation", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
-    render(
-      <AdminDashboard
-        sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
-        sessionServerTime={EXPIRING_SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
+    vi.setSystemTime(new Date("2026-07-30T00:00:00.000Z"));
+    let performanceTime = 0;
+    const performanceNow = vi
+      .spyOn(performance, "now")
+      .mockImplementation(() => performanceTime);
+    let resolveRevalidation!: (response: Response) => void;
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse(60_000))
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveRevalidation = resolve;
+        }),
+      );
+    renderDashboard();
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(750);
+    });
+    resolveRevalidation(sessionResponse(1_000));
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    performanceTime = 249;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(249);
+    });
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    performanceTime = 250;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/admin");
+
+    performanceNow.mockRestore();
+  });
+
+  it("expires active data when wall time advances while the monotonic clock pauses", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-30T00:00:00.000Z"));
+    const performanceNow = vi.spyOn(performance, "now").mockReturnValue(0);
+    fetchMock.mockResolvedValueOnce(dashboardResponse(1_000));
+    renderDashboard();
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
     });
 
     expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
     expect(replace).toHaveBeenCalledWith("/admin");
+    performanceNow.mockRestore();
   });
 
-  it("does not extend access when the wall clock moves backward", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-29T09:59:59.000Z"));
-    render(
-      <AdminDashboard
-        sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
-        sessionServerTime={EXPIRING_SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
+  it("invalidates a pre-suspension response and requires a fresh visible check", async () => {
+    let sessionChecks = 0;
+    let resolveStaleRevalidation!: (response: Response) => void;
+    let visibilityState: DocumentVisibilityState = "visible";
+    fetchMock.mockImplementation(() => {
+      sessionChecks += 1;
 
-    vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
-    });
+      if (sessionChecks === 1) {
+        return Promise.resolve(dashboardResponse());
+      }
 
-    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
-    expect(replace).toHaveBeenCalledWith("/admin");
-  });
+      if (sessionChecks === 2) {
+        return new Promise<Response>((resolve) => {
+          resolveStaleRevalidation = resolve;
+        });
+      }
 
-  it.each(["focus", "visibilitychange"])(
-    "revalidates and clears private data on invalid %s resume",
-    async (eventName) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
-      fetchMock.mockResolvedValueOnce(
+      return Promise.resolve(
         new Response(
           JSON.stringify({
             error: { code: "UNAUTHORIZED", message: "Unauthorized." },
@@ -323,76 +547,75 @@ describe("AdminDashboard", () => {
           { status: 401 },
         ),
       );
-      const visibility = vi
-        .spyOn(document, "visibilityState", "get")
-        .mockReturnValue("visible");
-      render(
-        <AdminDashboard
-          sessionExpiresAt={SESSION_EXPIRES_AT}
-          sessionServerTime={SESSION_SERVER_TIME}
-          summary={SUMMARY}
-          guests={GUESTS}
-        />,
-      );
+    });
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockImplementation(() => visibilityState);
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
 
-      await act(async () => {
-        if (eventName === "focus") {
-          window.dispatchEvent(new Event(eventName));
-        } else {
-          document.dispatchEvent(new Event(eventName));
-        }
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
 
-      expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
-      expect(fetchMock).toHaveBeenCalledWith("/api/admin/dashboard", {
-        cache: "no-store",
-      });
-      expect(replace).toHaveBeenCalledWith("/admin");
-      visibility.mockRestore();
-    },
-  );
+    act(() => {
+      visibilityState = "hidden";
+      document.dispatchEvent(new Event("visibilitychange"));
+      visibilityState = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
 
-  it("coalesces simultaneous resume events into one authoritative check", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
+    resolveStaleRevalidation(sessionResponse(60_000));
+    await flushAsyncWork();
+
+    expect(sessionChecks).toBe(3);
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin"));
+    visibility.mockRestore();
+  });
+
+  it("rejects a confirmation lifetime above the session protocol maximum", async () => {
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(sessionResponse(8 * 60 * 60 * 1_000 + 1));
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin"));
+  });
+
+  it("coalesces simultaneous resume events without reopening private data", async () => {
+    let sessionChecks = 0;
     let resolveRevalidation!: (response: Response) => void;
-    fetchMock.mockReturnValueOnce(
-      new Promise<Response>((resolve) => {
+    fetchMock.mockImplementation(() => {
+      sessionChecks += 1;
+
+      if (sessionChecks === 1) {
+        return Promise.resolve(dashboardResponse());
+      }
+
+      return new Promise<Response>((resolve) => {
         resolveRevalidation = resolve;
-      }),
-    );
+      });
+    });
     const visibility = vi
       .spyOn(document, "visibilityState", "get")
       .mockReturnValue("visible");
-    render(
-      <AdminDashboard
-        sessionExpiresAt={SESSION_EXPIRES_AT}
-        sessionServerTime={SESSION_SERVER_TIME}
-        summary={SUMMARY}
-        guests={GUESTS}
-      />,
-    );
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
 
-    window.dispatchEvent(new Event("focus"));
-    document.dispatchEvent(new Event("visibilitychange"));
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    await act(async () => {
-      resolveRevalidation(
-        new Response(
-          JSON.stringify({
-            error: { code: "UNAUTHORIZED", message: "Unauthorized." },
-          }),
-          { status: 401 },
-        ),
-      );
-      await Promise.resolve();
-      await Promise.resolve();
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
     });
 
+    expect(sessionChecks).toBe(2);
     expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+
+    resolveRevalidation(sessionResponse());
+    await flushAsyncWork();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
     visibility.mockRestore();
   });
 });

@@ -74,6 +74,13 @@ test("handles login failure and success, dashboard history, and logout", async (
     }),
   ).toBeVisible();
 
+  const rawAdminResponse = await page.request.get("/admin");
+  const rawAdminBody = await rawAdminResponse.text();
+  expect(rawAdminResponse.status()).toBe(200);
+  expect(rawAdminBody).toContain("Đang kiểm tra phiên quản trị");
+  expect(rawAdminBody).not.toContain(E2E_FIRST_GUEST_NAME);
+  expect(rawAdminBody).not.toContain("Phản hồi đầu tiên");
+
   const summary = page.locator('[aria-label="Tổng quan phản hồi"]');
   const expectedMetrics = [
     ["Tổng khách", "20"],

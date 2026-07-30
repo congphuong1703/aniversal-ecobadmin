@@ -1,23 +1,34 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 
+import { ADMIN_SESSION_MAX_REMAINING_MS } from "@/lib/admin-session-contract";
 import type {
   AdminGuestRow,
   DashboardSummary,
   RsvpSubmission,
 } from "@/lib/rsvp-repository";
 
-type AdminDashboardProps = {
+type DashboardData = {
   summary: DashboardSummary;
   guests: AdminGuestRow[];
-  sessionExpiresAt: number;
-  sessionServerTime: number;
+};
+
+type ConfirmedSession = {
+  remainingMs: number;
+  dashboard: DashboardData | null;
 };
 
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const SESSION_CONFIRMATION_TIMEOUT_MS = 5_000;
 type ClearReason = "expiry" | "logout";
+type SessionState = "checking" | "active" | ClearReason;
+
+function isTerminalSessionState(state: SessionState) {
+  return state === "expiry" || state === "logout";
+}
 
 const timestampFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh",
@@ -55,59 +66,398 @@ function responseClass(submission: RsvpSubmission | null) {
   return submission.attending ? "is-attending" : "is-declined";
 }
 
-export function AdminDashboard({
-  summary,
-  guests,
-  sessionExpiresAt,
-  sessionServerTime,
-}: AdminDashboardProps) {
+function isSubmission(value: unknown): value is RsvpSubmission {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  return (
+    "id" in value &&
+    typeof value.id === "string" &&
+    "guestId" in value &&
+    typeof value.guestId === "string" &&
+    "attending" in value &&
+    typeof value.attending === "boolean" &&
+    "message" in value &&
+    (typeof value.message === "string" || value.message === null) &&
+    "clientSubmissionId" in value &&
+    typeof value.clientSubmissionId === "string" &&
+    "createdAt" in value &&
+    typeof value.createdAt === "string"
+  );
+}
+
+function isDashboardSummary(value: unknown): value is DashboardSummary {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const summary = value as Record<string, unknown>;
+
+  return ["total", "attending", "declined", "pending"].every((key) => {
+    const count = summary[key];
+    return (
+      typeof count === "number" && Number.isSafeInteger(count) && count >= 0
+    );
+  });
+}
+
+function isAdminGuestRow(value: unknown): value is AdminGuestRow {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  return (
+    "id" in value &&
+    typeof value.id === "string" &&
+    "fullName" in value &&
+    typeof value.fullName === "string" &&
+    "imagePath" in value &&
+    typeof value.imagePath === "string" &&
+    "currentSubmission" in value &&
+    (value.currentSubmission === null ||
+      isSubmission(value.currentSubmission)) &&
+    "history" in value &&
+    Array.isArray(value.history) &&
+    value.history.every(isSubmission)
+  );
+}
+
+function confirmedSession(
+  value: unknown,
+  requiresDashboard: boolean,
+): ConfirmedSession | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("authenticated" in value) ||
+    value.authenticated !== true ||
+    !("remainingMs" in value) ||
+    !Number.isSafeInteger(value.remainingMs) ||
+    (value.remainingMs as number) <= 0 ||
+    (value.remainingMs as number) > ADMIN_SESSION_MAX_REMAINING_MS
+  ) {
+    return null;
+  }
+
+  if (!requiresDashboard) {
+    return { remainingMs: value.remainingMs as number, dashboard: null };
+  }
+
+  if (
+    !("summary" in value) ||
+    !isDashboardSummary(value.summary) ||
+    !("guests" in value) ||
+    !Array.isArray(value.guests) ||
+    !value.guests.every(isAdminGuestRow)
+  ) {
+    return null;
+  }
+
+  return {
+    remainingMs: value.remainingMs as number,
+    dashboard: { summary: value.summary, guests: value.guests },
+  };
+}
+
+function AdminSessionChecking() {
+  return (
+    <main className="admin-page admin-login-page">
+      <section
+        aria-live="polite"
+        className="admin-login-card"
+        role="status"
+      >
+        <div className="brand-mark admin-brand">
+          <span>Eco</span>
+          <strong>Badminton</strong>
+        </div>
+        <span className="eyebrow">RSVP · Admin</span>
+        <h1 className="font-display">Đang kiểm tra phiên quản trị…</h1>
+        <p className="admin-login-intro">
+          Dữ liệu riêng tư sẽ chỉ xuất hiện sau khi máy chủ xác nhận phiên hiện
+          tại.
+        </p>
+      </section>
+      <span
+        aria-hidden="true"
+        className="admin-orbit admin-orbit-large"
+      />
+      <span
+        aria-hidden="true"
+        className="admin-orbit admin-orbit-small"
+      />
+    </main>
+  );
+}
+
+export function AdminDashboard() {
   const router = useRouter();
-  const initialRemainingMs = Math.max(
-    0,
-    sessionExpiresAt * 1000 - sessionServerTime,
-  );
-  const [clearReason, setClearReason] = useState<ClearReason | null>(() =>
-    initialRemainingMs === 0 ? "expiry" : null,
-  );
-  const clearReasonRef = useRef(clearReason);
+  const [sessionState, setSessionState] = useState<SessionState>("checking");
+  const sessionStateRef = useRef<SessionState>("checking");
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const dashboardRef = useRef<DashboardData | null>(null);
   const expiryTimerRef = useRef<number | undefined>(undefined);
+  const confirmationTimerRef = useRef<number | undefined>(undefined);
+  const confirmationAbortRef = useRef<AbortController | null>(null);
   const monotonicDeadlineRef = useRef<number | null>(null);
-  const revalidationRequestRef = useRef(0);
-  const revalidationInFlightRef = useRef(false);
+  const wallDeadlineRef = useRef<number | null>(null);
+  const confirmationRequestRef = useRef(0);
+  const confirmationInFlightRef = useRef(false);
   const [expandedGuestIds, setExpandedGuestIds] = useState<Set<string>>(
     () => new Set(),
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
 
-  const clearPrivateDashboard = useCallback((reason: ClearReason) => {
-    if (clearReasonRef.current) {
-      return;
-    }
-
-    clearReasonRef.current = reason;
-    revalidationRequestRef.current += 1;
-    revalidationInFlightRef.current = false;
-
+  const clearExpiryTimer = useCallback(() => {
     if (expiryTimerRef.current !== undefined) {
       window.clearTimeout(expiryTimerRef.current);
       expiryTimerRef.current = undefined;
     }
-
-    setClearReason(reason);
   }, []);
 
-  useEffect(() => {
-    if (clearReason) {
+  const clearConfirmationTimer = useCallback(() => {
+    if (confirmationTimerRef.current !== undefined) {
+      window.clearTimeout(confirmationTimerRef.current);
+      confirmationTimerRef.current = undefined;
+    }
+  }, []);
+
+  const clearPrivateDashboard = useCallback(
+    (reason: ClearReason) => {
+      if (isTerminalSessionState(sessionStateRef.current)) {
+        return;
+      }
+
+      sessionStateRef.current = reason;
+      confirmationRequestRef.current += 1;
+      confirmationInFlightRef.current = false;
+      confirmationAbortRef.current?.abort();
+      confirmationAbortRef.current = null;
+      monotonicDeadlineRef.current = null;
+      wallDeadlineRef.current = null;
+      dashboardRef.current = null;
+      clearConfirmationTimer();
+      clearExpiryTimer();
+      setDashboard(null);
+      setSessionState(reason);
+    },
+    [clearConfirmationTimer, clearExpiryTimer],
+  );
+
+  const hideAndInvalidateConfirmation = useCallback(() => {
+    if (isTerminalSessionState(sessionStateRef.current)) {
       return;
     }
 
-    monotonicDeadlineRef.current = performance.now() + initialRemainingMs;
+    sessionStateRef.current = "checking";
+    confirmationRequestRef.current += 1;
+    confirmationInFlightRef.current = false;
+    confirmationAbortRef.current?.abort();
+    confirmationAbortRef.current = null;
+    monotonicDeadlineRef.current = null;
+    wallDeadlineRef.current = null;
+    clearConfirmationTimer();
+    clearExpiryTimer();
+    flushSync(() => setSessionState("checking"));
+  }, [clearConfirmationTimer, clearExpiryTimer]);
+
+  const requestSessionConfirmation = useCallback(
+    async () => {
+      if (
+        confirmationInFlightRef.current ||
+        isTerminalSessionState(sessionStateRef.current)
+      ) {
+        return;
+      }
+
+      confirmationInFlightRef.current = true;
+      const requestId = confirmationRequestRef.current + 1;
+      confirmationRequestRef.current = requestId;
+      const controller = new AbortController();
+      confirmationAbortRef.current = controller;
+      const requestStartedAt = performance.now();
+      const requestStartedWallTime = Date.now();
+      const requiresDashboard = dashboardRef.current === null;
+      const endpoint = requiresDashboard
+        ? "/api/admin/dashboard"
+        : "/api/admin/session";
+
+      confirmationTimerRef.current = window.setTimeout(() => {
+        if (
+          requestId !== confirmationRequestRef.current ||
+          isTerminalSessionState(sessionStateRef.current)
+        ) {
+          return;
+        }
+
+        controller.abort();
+        clearPrivateDashboard("expiry");
+      }, SESSION_CONFIRMATION_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(endpoint, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (
+          requestId !== confirmationRequestRef.current ||
+          isTerminalSessionState(sessionStateRef.current)
+        ) {
+          return;
+        }
+
+        if (!response.ok) {
+          clearPrivateDashboard("expiry");
+          return;
+        }
+
+        const confirmation = confirmedSession(
+          await response.json(),
+          requiresDashboard,
+        );
+        const currentPerformanceTime = performance.now();
+        const elapsedMs = Math.max(
+          0,
+          currentPerformanceTime - requestStartedAt,
+          Date.now() - requestStartedWallTime,
+        );
+        const remainingAfterDelivery =
+          confirmation === null ? 0 : confirmation.remainingMs - elapsedMs;
+        const deadline = currentPerformanceTime + remainingAfterDelivery;
+
+        if (
+          requestId !== confirmationRequestRef.current ||
+          confirmation === null ||
+          remainingAfterDelivery <= 0 ||
+          !Number.isFinite(deadline)
+        ) {
+          clearPrivateDashboard("expiry");
+          return;
+        }
+
+        clearConfirmationTimer();
+        confirmationAbortRef.current = null;
+        monotonicDeadlineRef.current = deadline;
+        wallDeadlineRef.current = Date.now() + remainingAfterDelivery;
+        if (confirmation.dashboard) {
+          dashboardRef.current = confirmation.dashboard;
+          setDashboard(confirmation.dashboard);
+        }
+        sessionStateRef.current = "active";
+        setSessionState("active");
+      } catch {
+        if (
+          requestId === confirmationRequestRef.current &&
+          !isTerminalSessionState(sessionStateRef.current)
+        ) {
+          clearPrivateDashboard("expiry");
+        }
+      } finally {
+        if (requestId === confirmationRequestRef.current) {
+          clearConfirmationTimer();
+          confirmationAbortRef.current = null;
+          confirmationInFlightRef.current = false;
+        }
+      }
+    },
+    [clearConfirmationTimer, clearPrivateDashboard],
+  );
+
+  const confirmSessionAfterResume = useCallback(() => {
+    if (
+      confirmationInFlightRef.current ||
+      isTerminalSessionState(sessionStateRef.current)
+    ) {
+      return;
+    }
+
+    hideAndInvalidateConfirmation();
+    void requestSessionConfirmation();
+  }, [hideAndInvalidateConfirmation, requestSessionConfirmation]);
+
+  useEffect(() => {
+    const effectRequestId = confirmationRequestRef.current;
+
+    queueMicrotask(() => {
+      if (effectRequestId === confirmationRequestRef.current) {
+        void requestSessionConfirmation();
+      }
+    });
+
+    function confirmAfterFocus() {
+      confirmSessionAfterResume();
+    }
+
+    function hideAfterBlur() {
+      hideAndInvalidateConfirmation();
+    }
+
+    function confirmAfterVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        confirmSessionAfterResume();
+      } else {
+        hideAndInvalidateConfirmation();
+      }
+    }
+
+    function hideAfterPageHide() {
+      hideAndInvalidateConfirmation();
+    }
+
+    function confirmAfterPageShow() {
+      confirmSessionAfterResume();
+    }
+
+    window.addEventListener("focus", confirmAfterFocus);
+    window.addEventListener("blur", hideAfterBlur);
+    window.addEventListener("pagehide", hideAfterPageHide);
+    window.addEventListener("pageshow", confirmAfterPageShow);
+    document.addEventListener(
+      "visibilitychange",
+      confirmAfterVisibilityChange,
+    );
+
+    return () => {
+      confirmationRequestRef.current += 1;
+      confirmationInFlightRef.current = false;
+      confirmationAbortRef.current?.abort();
+      confirmationAbortRef.current = null;
+      clearConfirmationTimer();
+      clearExpiryTimer();
+      window.removeEventListener("focus", confirmAfterFocus);
+      window.removeEventListener("blur", hideAfterBlur);
+      window.removeEventListener("pagehide", hideAfterPageHide);
+      window.removeEventListener("pageshow", confirmAfterPageShow);
+      document.removeEventListener(
+        "visibilitychange",
+        confirmAfterVisibilityChange,
+      );
+    };
+  }, [
+    clearConfirmationTimer,
+    clearExpiryTimer,
+    confirmSessionAfterResume,
+    hideAndInvalidateConfirmation,
+    requestSessionConfirmation,
+  ]);
+
+  useEffect(() => {
+    if (sessionState !== "active") {
+      return;
+    }
 
     function expireIfNeeded() {
-      const deadline = monotonicDeadlineRef.current;
+      const monotonicDeadline = monotonicDeadlineRef.current;
+      const wallDeadline = wallDeadlineRef.current;
 
-      if (deadline !== null && performance.now() >= deadline) {
+      if (
+        (monotonicDeadline !== null &&
+          performance.now() >= monotonicDeadline) ||
+        (wallDeadline !== null && Date.now() >= wallDeadline)
+      ) {
         clearPrivateDashboard("expiry");
         return true;
       }
@@ -116,9 +466,15 @@ export function AdminDashboard({
     }
 
     function scheduleExpiryCheck() {
-      const deadline = monotonicDeadlineRef.current;
-      const remaining =
-        deadline === null ? 0 : Math.max(0, deadline - performance.now());
+      const monotonicDeadline = monotonicDeadlineRef.current;
+      const wallDeadline = wallDeadlineRef.current;
+      const monotonicRemaining =
+        monotonicDeadline === null
+          ? 0
+          : Math.max(0, monotonicDeadline - performance.now());
+      const wallRemaining =
+        wallDeadline === null ? 0 : Math.max(0, wallDeadline - Date.now());
+      const remaining = Math.min(monotonicRemaining, wallRemaining);
       expiryTimerRef.current = window.setTimeout(
         () => {
           if (!expireIfNeeded()) {
@@ -129,90 +485,25 @@ export function AdminDashboard({
       );
     }
 
-    async function revalidateAfterTabResume() {
-      if (
-        clearReasonRef.current ||
-        revalidationInFlightRef.current ||
-        expireIfNeeded()
-      ) {
-        return;
-      }
-
-      revalidationInFlightRef.current = true;
-      const requestId = revalidationRequestRef.current + 1;
-      revalidationRequestRef.current = requestId;
-
-      try {
-        const response = await fetch("/api/admin/dashboard", {
-          cache: "no-store",
-        });
-
-        if (
-          requestId !== revalidationRequestRef.current ||
-          clearReasonRef.current
-        ) {
-          return;
-        }
-
-        if (!response.ok || expireIfNeeded()) {
-          clearPrivateDashboard("expiry");
-        }
-      } catch {
-        if (
-          requestId === revalidationRequestRef.current &&
-          !clearReasonRef.current
-        ) {
-          clearPrivateDashboard("expiry");
-        }
-      } finally {
-        if (requestId === revalidationRequestRef.current) {
-          revalidationInFlightRef.current = false;
-        }
-      }
-    }
-
-    function checkAfterFocus() {
-      void revalidateAfterTabResume();
-    }
-
-    function checkAfterVisibilityChange() {
-      if (document.visibilityState === "visible") {
-        void revalidateAfterTabResume();
-      }
-    }
-
     if (!expireIfNeeded()) {
       scheduleExpiryCheck();
     }
-    window.addEventListener("focus", checkAfterFocus);
-    document.addEventListener("visibilitychange", checkAfterVisibilityChange);
 
     return () => {
-      revalidationRequestRef.current += 1;
-      revalidationInFlightRef.current = false;
-
-      if (expiryTimerRef.current !== undefined) {
-        window.clearTimeout(expiryTimerRef.current);
-        expiryTimerRef.current = undefined;
-      }
-      window.removeEventListener("focus", checkAfterFocus);
-      document.removeEventListener(
-        "visibilitychange",
-        checkAfterVisibilityChange,
-      );
+      clearExpiryTimer();
     };
-  }, [clearPrivateDashboard, clearReason, initialRemainingMs]);
+  }, [clearExpiryTimer, clearPrivateDashboard, sessionState]);
 
   useEffect(() => {
-    if (!clearReason) {
+    if (sessionState !== "expiry" && sessionState !== "logout") {
       return;
     }
 
-    if (clearReason === "expiry") {
+    if (sessionState === "expiry") {
       router.replace("/admin");
     }
     router.refresh();
-  }, [clearReason, router]);
+  }, [router, sessionState]);
 
   function toggleHistory(guestId: string) {
     setExpandedGuestIds((current) => {
@@ -247,16 +538,21 @@ export function AdminDashboard({
     }
   }
 
+  if (sessionState === "checking") {
+    return <AdminSessionChecking />;
+  }
+
+  if (sessionState !== "active" || !dashboard) {
+    return null;
+  }
+
+  const { summary, guests } = dashboard;
   const metrics = [
     { label: "Tổng khách", value: summary.total, tone: "total" },
     { label: "Tham dự", value: summary.attending, tone: "attending" },
     { label: "Không tham dự", value: summary.declined, tone: "declined" },
     { label: "Chưa phản hồi", value: summary.pending, tone: "pending" },
   ];
-
-  if (clearReason) {
-    return null;
-  }
 
   return (
     <main className="admin-page admin-dashboard-page">

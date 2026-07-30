@@ -3,13 +3,12 @@ import "server-only";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 
+import { ADMIN_SESSION_TTL_SECONDS } from "@/lib/admin-session-contract";
 import { getEnv } from "@/lib/env";
 
 const JWT_ALGORITHM = "HS256";
 const TOKEN_ISSUER = "ecobadminton-rsvp";
 const ADMIN_AUDIENCE = "admin";
-const ADMIN_SESSION_TTL_SECONDS = 8 * 60 * 60;
-
 export const ADMIN_SESSION_COOKIE_NAME = "ecobadminton_admin";
 
 export type AdminSessionTokenDependencies = {
