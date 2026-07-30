@@ -8,16 +8,19 @@ import { getAdminDashboard } from "@/lib/rsvp-repository";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
-  let session = null;
-
+async function readSessionFailClosed() {
   try {
-    session = await readAdminSessionMetadata();
+    return await readAdminSessionMetadata();
   } catch {
-    // Session configuration failures must fail closed without loading guest data.
+    // Session configuration failures must fail closed.
+    return null;
   }
+}
 
-  if (!session) {
+export default async function AdminPage() {
+  const initialSession = await readSessionFailClosed();
+
+  if (!initialSession) {
     return <AdminLogin />;
   }
 
@@ -25,10 +28,17 @@ export default async function AdminPage() {
   const { summary, guests } = await getAdminDashboard(
     normalizeE2eWorkerScope(requestHeaders.get(E2E_WORKER_HEADER)),
   );
+  const renderSession = await readSessionFailClosed();
+
+  if (!renderSession) {
+    return <AdminLogin />;
+  }
+
   return (
     <AdminDashboard
       guests={guests}
-      sessionExpiresAt={session.expiresAt}
+      sessionExpiresAt={renderSession.expiresAt}
+      sessionServerTime={renderSession.serverTime}
       summary={summary}
     />
   );

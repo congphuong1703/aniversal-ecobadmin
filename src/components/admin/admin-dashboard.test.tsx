@@ -24,8 +24,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const SESSION_EXPIRES_AT = Date.parse("2050-07-29T10:00:00.000Z") / 1000;
+const SESSION_SERVER_TIME = Date.parse("2050-07-29T09:00:00.000Z");
 const EXPIRING_SESSION_EXPIRES_AT =
   Date.parse("2026-07-29T10:00:00.000Z") / 1000;
+const EXPIRING_SESSION_SERVER_TIME = Date.parse("2026-07-29T09:59:59.000Z");
 
 const SUMMARY: DashboardSummary = {
   total: 2,
@@ -95,6 +97,7 @@ describe("AdminDashboard", () => {
     render(
       <AdminDashboard
         sessionExpiresAt={SESSION_EXPIRES_AT}
+        sessionServerTime={SESSION_SERVER_TIME}
         summary={SUMMARY}
         guests={GUESTS}
       />,
@@ -117,6 +120,7 @@ describe("AdminDashboard", () => {
     render(
       <AdminDashboard
         sessionExpiresAt={SESSION_EXPIRES_AT}
+        sessionServerTime={SESSION_SERVER_TIME}
         summary={SUMMARY}
         guests={GUESTS}
       />,
@@ -170,6 +174,7 @@ describe("AdminDashboard", () => {
     render(
       <AdminDashboard
         sessionExpiresAt={SESSION_EXPIRES_AT}
+        sessionServerTime={SESSION_SERVER_TIME}
         summary={{ total: 1, attending: 0, declined: 1, pending: 0 }}
         guests={[
           {
@@ -196,22 +201,33 @@ describe("AdminDashboard", () => {
     expect(entries[1]).toHaveTextContent("Phản hồi cũ hơn");
   });
 
-  it("logs out and refreshes the server route", async () => {
+  it("clears private data before a successful logout refresh completes", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ authenticated: false }), { status: 200 }),
     );
+    refresh.mockReturnValue(new Promise<void>(() => {}));
     const user = userEvent.setup();
     render(
       <AdminDashboard
         sessionExpiresAt={SESSION_EXPIRES_AT}
+        sessionServerTime={SESSION_SERVER_TIME}
         summary={SUMMARY}
         guests={GUESTS}
       />,
     );
 
+    await user.click(
+      screen.getByRole("button", { name: /xem lịch sử.*nguyễn văn an/i }),
+    );
+    expect(screen.getByText("Mình có lịch công tác.")).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: /đăng xuất/i }));
 
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Mình có lịch công tác."),
+    ).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/logout", {
       method: "POST",
     });
@@ -229,6 +245,7 @@ describe("AdminDashboard", () => {
     render(
       <AdminDashboard
         sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
+        sessionServerTime={EXPIRING_SESSION_SERVER_TIME}
         summary={SUMMARY}
         guests={GUESTS}
       />,
@@ -252,23 +269,130 @@ describe("AdminDashboard", () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it("checks expiry again when a suspended tab regains focus", async () => {
+  it("uses server time for the initial duration when the client clock is behind", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-29T09:00:00.000Z"));
+    vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
     render(
       <AdminDashboard
         sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
+        sessionServerTime={EXPIRING_SESSION_SERVER_TIME}
         summary={SUMMARY}
         guests={GUESTS}
       />,
     );
 
-    vi.setSystemTime(new Date("2026-07-29T10:00:00.000Z"));
     await act(async () => {
-      window.dispatchEvent(new Event("focus"));
+      await vi.advanceTimersByTimeAsync(1000);
     });
 
     expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
     expect(replace).toHaveBeenCalledWith("/admin");
+  });
+
+  it("does not extend access when the wall clock moves backward", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T09:59:59.000Z"));
+    render(
+      <AdminDashboard
+        sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
+        sessionServerTime={EXPIRING_SESSION_SERVER_TIME}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
+
+    vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/admin");
+  });
+
+  it.each(["focus", "visibilitychange"])(
+    "revalidates and clears private data on invalid %s resume",
+    async (eventName) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "UNAUTHORIZED", message: "Unauthorized." },
+          }),
+          { status: 401 },
+        ),
+      );
+      const visibility = vi
+        .spyOn(document, "visibilityState", "get")
+        .mockReturnValue("visible");
+      render(
+        <AdminDashboard
+          sessionExpiresAt={SESSION_EXPIRES_AT}
+          sessionServerTime={SESSION_SERVER_TIME}
+          summary={SUMMARY}
+          guests={GUESTS}
+        />,
+      );
+
+      await act(async () => {
+        if (eventName === "focus") {
+          window.dispatchEvent(new Event(eventName));
+        } else {
+          document.dispatchEvent(new Event(eventName));
+        }
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith("/api/admin/dashboard", {
+        cache: "no-store",
+      });
+      expect(replace).toHaveBeenCalledWith("/admin");
+      visibility.mockRestore();
+    },
+  );
+
+  it("coalesces simultaneous resume events into one authoritative check", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2000-01-01T00:00:00.000Z"));
+    let resolveRevalidation!: (response: Response) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveRevalidation = resolve;
+      }),
+    );
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("visible");
+    render(
+      <AdminDashboard
+        sessionExpiresAt={SESSION_EXPIRES_AT}
+        sessionServerTime={SESSION_SERVER_TIME}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
+
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveRevalidation(
+        new Response(
+          JSON.stringify({
+            error: { code: "UNAUTHORIZED", message: "Unauthorized." },
+          }),
+          { status: 401 },
+        ),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    visibility.mockRestore();
   });
 });

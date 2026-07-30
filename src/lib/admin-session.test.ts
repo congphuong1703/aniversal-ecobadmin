@@ -70,7 +70,10 @@ describe("admin sessions", () => {
         secret: ADMIN_SECRET,
         now: () => new Date(),
       }),
-    ).resolves.toEqual({ expiresAt: payload.exp });
+    ).resolves.toEqual({
+      expiresAt: payload.exp,
+      serverTime: NOW.getTime() + 8 * 60 * 60 * 1000 - 1,
+    });
 
     vi.setSystemTime(new Date(NOW.getTime() + 8 * 60 * 60 * 1000));
     await expect(
@@ -133,6 +136,7 @@ describe("admin sessions", () => {
     await expect(readAdminSession()).resolves.toBe(true);
     await expect(readAdminSessionMetadata()).resolves.toEqual({
       expiresAt: Math.floor(NOW.getTime() / 1000) + 8 * 60 * 60,
+      serverTime: NOW.getTime(),
     });
 
     cookieStore.get.mockReturnValue({ value: `${token}tampered` });

@@ -25,13 +25,16 @@ vi.mock("@/components/admin/admin-dashboard", () => ({
   AdminDashboard: ({
     guests,
     sessionExpiresAt,
+    sessionServerTime,
   }: {
     guests: { fullName: string }[];
     sessionExpiresAt: number;
+    sessionServerTime: number;
   }) => (
     <div>
       <span>{guests.map((guest) => guest.fullName).join(", ")}</span>
       <span>expires at {sessionExpiresAt}</span>
+      <span>server time {sessionServerTime}</span>
     </div>
   ),
 }));
@@ -57,7 +60,10 @@ describe("AdminPage", () => {
     );
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it("renders only login and never fetches dashboard data without a valid session", async () => {
     vi.mocked(readAdminSessionMetadata).mockResolvedValue(null);
@@ -70,15 +76,39 @@ describe("AdminPage", () => {
   });
 
   it("loads full-name dashboard data only after the server session is valid", async () => {
-    vi.mocked(readAdminSessionMetadata).mockResolvedValue({
-      expiresAt: 1_788_000_000,
-    });
+    vi.mocked(readAdminSessionMetadata)
+      .mockResolvedValueOnce({
+        expiresAt: 1_788_000_000,
+        serverTime: 1_787_971_200_000,
+      })
+      .mockResolvedValueOnce({
+        expiresAt: 1_788_000_000,
+        serverTime: 1_787_971_205_000,
+      });
     vi.mocked(getAdminDashboard).mockResolvedValue(DASHBOARD);
 
     render(await AdminPage());
 
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
     expect(screen.getByText(/expires at 1788000000/i)).toBeInTheDocument();
+    expect(screen.getByText(/server time 1787971205000/i)).toBeInTheDocument();
     expect(getAdminDashboard).toHaveBeenCalledWith("worker-9");
+    expect(readAdminSessionMetadata).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops loaded private data if the session expires during server rendering", async () => {
+    vi.mocked(readAdminSessionMetadata)
+      .mockResolvedValueOnce({
+        expiresAt: 1_788_000_000,
+        serverTime: 1_787_971_200_000,
+      })
+      .mockResolvedValueOnce(null);
+    vi.mocked(getAdminDashboard).mockResolvedValue(DASHBOARD);
+
+    render(await AdminPage());
+
+    expect(screen.getByText("Admin login only")).toBeInTheDocument();
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(getAdminDashboard).toHaveBeenCalledOnce();
   });
 });

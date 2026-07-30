@@ -19,6 +19,7 @@ export type AdminSessionTokenDependencies = {
 
 export type AdminSessionMetadata = {
   expiresAt: number;
+  serverTime: number;
 };
 
 function encodeSecret(secret: string) {
@@ -47,6 +48,7 @@ export async function verifyAdminSessionToken(
   token: string,
   dependencies: AdminSessionTokenDependencies,
 ): Promise<AdminSessionMetadata> {
+  const serverTime = currentDate(dependencies.now);
   const { payload } = await jwtVerify(
     token,
     encodeSecret(dependencies.secret),
@@ -54,7 +56,7 @@ export async function verifyAdminSessionToken(
       algorithms: [JWT_ALGORITHM],
       issuer: TOKEN_ISSUER,
       audience: ADMIN_AUDIENCE,
-      currentDate: currentDate(dependencies.now),
+      currentDate: serverTime,
     },
   );
 
@@ -62,7 +64,7 @@ export async function verifyAdminSessionToken(
     throw new Error("Admin session expiry is missing.");
   }
 
-  return { expiresAt: payload.exp };
+  return { expiresAt: payload.exp, serverTime: serverTime.getTime() };
 }
 
 export async function createAdminSession() {

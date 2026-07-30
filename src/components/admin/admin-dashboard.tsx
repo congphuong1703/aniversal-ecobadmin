@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type {
@@ -13,9 +13,11 @@ type AdminDashboardProps = {
   summary: DashboardSummary;
   guests: AdminGuestRow[];
   sessionExpiresAt: number;
+  sessionServerTime: number;
 };
 
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
+type ClearReason = "expiry" | "logout";
 
 const timestampFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh",
@@ -57,28 +59,56 @@ export function AdminDashboard({
   summary,
   guests,
   sessionExpiresAt,
+  sessionServerTime,
 }: AdminDashboardProps) {
   const router = useRouter();
-  const expiresAtMs = sessionExpiresAt * 1000;
-  const [sessionExpired, setSessionExpired] = useState(
-    () => Date.now() >= expiresAtMs,
+  const initialRemainingMs = Math.max(
+    0,
+    sessionExpiresAt * 1000 - sessionServerTime,
   );
+  const [clearReason, setClearReason] = useState<ClearReason | null>(() =>
+    initialRemainingMs === 0 ? "expiry" : null,
+  );
+  const clearReasonRef = useRef(clearReason);
+  const expiryTimerRef = useRef<number | undefined>(undefined);
+  const monotonicDeadlineRef = useRef<number | null>(null);
+  const revalidationRequestRef = useRef(0);
+  const revalidationInFlightRef = useRef(false);
   const [expandedGuestIds, setExpandedGuestIds] = useState<Set<string>>(
     () => new Set(),
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
 
-  useEffect(() => {
-    if (sessionExpired) {
+  const clearPrivateDashboard = useCallback((reason: ClearReason) => {
+    if (clearReasonRef.current) {
       return;
     }
 
-    let timer: number | undefined;
+    clearReasonRef.current = reason;
+    revalidationRequestRef.current += 1;
+    revalidationInFlightRef.current = false;
+
+    if (expiryTimerRef.current !== undefined) {
+      window.clearTimeout(expiryTimerRef.current);
+      expiryTimerRef.current = undefined;
+    }
+
+    setClearReason(reason);
+  }, []);
+
+  useEffect(() => {
+    if (clearReason) {
+      return;
+    }
+
+    monotonicDeadlineRef.current = performance.now() + initialRemainingMs;
 
     function expireIfNeeded() {
-      if (Date.now() >= expiresAtMs) {
-        setSessionExpired(true);
+      const deadline = monotonicDeadlineRef.current;
+
+      if (deadline !== null && performance.now() >= deadline) {
+        clearPrivateDashboard("expiry");
         return true;
       }
 
@@ -86,8 +116,10 @@ export function AdminDashboard({
     }
 
     function scheduleExpiryCheck() {
-      const remaining = expiresAtMs - Date.now();
-      timer = window.setTimeout(
+      const deadline = monotonicDeadlineRef.current;
+      const remaining =
+        deadline === null ? 0 : Math.max(0, deadline - performance.now());
+      expiryTimerRef.current = window.setTimeout(
         () => {
           if (!expireIfNeeded()) {
             scheduleExpiryCheck();
@@ -97,33 +129,90 @@ export function AdminDashboard({
       );
     }
 
-    function checkAfterTabResume() {
-      expireIfNeeded();
+    async function revalidateAfterTabResume() {
+      if (
+        clearReasonRef.current ||
+        revalidationInFlightRef.current ||
+        expireIfNeeded()
+      ) {
+        return;
+      }
+
+      revalidationInFlightRef.current = true;
+      const requestId = revalidationRequestRef.current + 1;
+      revalidationRequestRef.current = requestId;
+
+      try {
+        const response = await fetch("/api/admin/dashboard", {
+          cache: "no-store",
+        });
+
+        if (
+          requestId !== revalidationRequestRef.current ||
+          clearReasonRef.current
+        ) {
+          return;
+        }
+
+        if (!response.ok || expireIfNeeded()) {
+          clearPrivateDashboard("expiry");
+        }
+      } catch {
+        if (
+          requestId === revalidationRequestRef.current &&
+          !clearReasonRef.current
+        ) {
+          clearPrivateDashboard("expiry");
+        }
+      } finally {
+        if (requestId === revalidationRequestRef.current) {
+          revalidationInFlightRef.current = false;
+        }
+      }
+    }
+
+    function checkAfterFocus() {
+      void revalidateAfterTabResume();
+    }
+
+    function checkAfterVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void revalidateAfterTabResume();
+      }
     }
 
     if (!expireIfNeeded()) {
       scheduleExpiryCheck();
     }
-    window.addEventListener("focus", checkAfterTabResume);
-    document.addEventListener("visibilitychange", checkAfterTabResume);
+    window.addEventListener("focus", checkAfterFocus);
+    document.addEventListener("visibilitychange", checkAfterVisibilityChange);
 
     return () => {
-      if (timer !== undefined) {
-        window.clearTimeout(timer);
+      revalidationRequestRef.current += 1;
+      revalidationInFlightRef.current = false;
+
+      if (expiryTimerRef.current !== undefined) {
+        window.clearTimeout(expiryTimerRef.current);
+        expiryTimerRef.current = undefined;
       }
-      window.removeEventListener("focus", checkAfterTabResume);
-      document.removeEventListener("visibilitychange", checkAfterTabResume);
+      window.removeEventListener("focus", checkAfterFocus);
+      document.removeEventListener(
+        "visibilitychange",
+        checkAfterVisibilityChange,
+      );
     };
-  }, [expiresAtMs, sessionExpired]);
+  }, [clearPrivateDashboard, clearReason, initialRemainingMs]);
 
   useEffect(() => {
-    if (!sessionExpired) {
+    if (!clearReason) {
       return;
     }
 
-    router.replace("/admin");
+    if (clearReason === "expiry") {
+      router.replace("/admin");
+    }
     router.refresh();
-  }, [router, sessionExpired]);
+  }, [clearReason, router]);
 
   function toggleHistory(guestId: string) {
     setExpandedGuestIds((current) => {
@@ -150,7 +239,7 @@ export function AdminDashboard({
         throw new Error("Logout failed");
       }
 
-      router.refresh();
+      clearPrivateDashboard("logout");
     } catch {
       setLogoutError("Không thể đăng xuất. Vui lòng thử lại.");
     } finally {
@@ -165,7 +254,7 @@ export function AdminDashboard({
     { label: "Chưa phản hồi", value: summary.pending, tone: "pending" },
   ];
 
-  if (sessionExpired) {
+  if (clearReason) {
     return null;
   }
 
