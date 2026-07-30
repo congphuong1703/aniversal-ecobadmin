@@ -672,9 +672,9 @@ export function RsvpExperience() {
       <div className="section-shell">
         <div className="section-heading reveal">
           <div>
-            <span className="eyebrow">RSVP · 20 khách mời</span>
+            <span className="eyebrow">RSVP · Khách mời</span>
             <h2 className="font-display" id="rsvp-title">
-              Tìm mình trong đội hình.
+              Tấm thiệp mời trên bàn.
             </h2>
           </div>
           <p>

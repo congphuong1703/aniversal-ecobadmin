@@ -15,7 +15,7 @@ export function EventDetails() {
           <span className="eyebrow">Cuộc hẹn</span>
           <h2 className="font-display" id="event-title">Đến vì đội. Ở lại vì chuyện vui.</h2>
           <p>
-            Một buổi tối không cầu kỳ — chỉ cần đúng người, đúng bàn và đủ thời gian để kể lại một năm vừa qua.
+            Một buổi tối không CẦU kỳ, không CHẠY deadline — chỉ cần đúng người, đúng bàn và đúng thời điểm.
           </p>
         </div>
         <div className="event-card reveal reveal-delay">

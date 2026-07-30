@@ -15,8 +15,8 @@ export function Anniversary() {
             Một năm không được đếm bằng số trận thắng, mà bằng những lần cùng nhau ra sân, cùng cười và cùng trở lại vào tuần sau.
           </p>
           <div className="anniversary-meta">
-            <span><strong>20</strong> đồng đội</span>
-            <span><strong>01</strong> tinh thần chung</span>
+            <span><strong>1</strong> đồng đội</span>
+            <span><strong>1</strong> tinh thần chung</span>
           </div>
         </div>
       </div>
