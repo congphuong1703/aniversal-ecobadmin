@@ -79,13 +79,16 @@ export function getE2eRsvpPersistence(scope: string): RsvpPersistenceAdapter {
   }
 
   async function insertSubmissionWithMetadata(input: RsvpSubmissionInsert) {
-    const existing = await findByClientSubmissionId(input.client_submission_id);
+    const store = getStore(scope);
+    const existing =
+      store.rows.find(
+        (row) => row.client_submission_id === input.client_submission_id,
+      ) ?? null;
 
     if (existing) {
       return { row: existing, deduplicated: true };
     }
 
-    const store = getStore(scope);
     const row = createDeterministicRow(store, input);
     store.rows.push(row);
     return { row, deduplicated: false };

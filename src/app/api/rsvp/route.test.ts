@@ -29,12 +29,12 @@ const SUBMISSION = {
   createdAt: "2026-07-29T02:00:00.000Z",
 };
 
-function request(body: unknown) {
+function request(body: unknown, workerScope = "  worker-7  ") {
   return new Request("http://localhost/api/rsvp", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-e2e-worker-id": "worker-7",
+      "x-e2e-worker-id": workerScope,
     },
     body: JSON.stringify(body),
   });
@@ -97,6 +97,15 @@ describe("POST /api/rsvp", () => {
       expect(createSubmissionWithMetadata).not.toHaveBeenCalled();
     },
   );
+
+  it("does not pass a malformed worker scope to the repository", async () => {
+    await POST(request(validBody(), "contains spaces"));
+
+    expect(createSubmissionWithMetadata).toHaveBeenCalledWith(
+      expect.any(Object),
+      undefined,
+    );
+  });
 
   it.each([
     {

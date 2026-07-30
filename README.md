@@ -101,6 +101,8 @@ npm run build
 
 Playwright starts its own isolated server on port `3108`, uses only the in-memory repository, and covers Chromium at `1440x1000` plus a Chromium mobile viewport at `390x844`. It checks horizontal overflow, `4:5` guest cards, keyboard/focus behavior, reduced motion, RSVP retry deduplication, intentional history, the approved Maps link, and the admin flow.
 
+The production build finishes by scanning every JavaScript file in `.next/static` for all 20 configured full guest names. The build fails if any full name enters a client bundle.
+
 These assertions validate responsive behavior but are not screenshot-diff tests; font rasterization and subtle platform-specific spacing still require a final visual review in the target browser.
 
 If the project-managed Chromium is not installed yet, install it with the official Playwright command:

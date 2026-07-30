@@ -24,17 +24,36 @@ async function resetRepository(
   expect(response.status()).toBe(200);
 }
 
+async function expectNoHorizontalOverflow(page: Page) {
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+}
+
+async function expectGuestCardsToRemainFourByFive(page: Page) {
+  const ratios = await page.locator(".guest-card").evaluateAll((cards) =>
+    cards.map((card) => {
+      const box = card.getBoundingClientRect();
+      return box.width / box.height;
+    }),
+  );
+
+  expect(ratios).toHaveLength(20);
+
+  for (const ratio of ratios) {
+    expect(ratio).toBeCloseTo(4 / 5, 2);
+  }
+}
+
 async function openRsvp(page: Page) {
   await page.goto("/#rsvp");
   await expect(
     page.getByRole("radio", { name: /Ảnh khách mời/ }).first(),
   ).toBeVisible();
-  const guestCard = await page.locator(".guest-card").first().boundingBox();
-  expect(guestCard).not.toBeNull();
-  expect((guestCard?.width ?? 0) / (guestCard?.height ?? 1)).toBeCloseTo(
-    4 / 5,
-    1,
-  );
+  await expectNoHorizontalOverflow(page);
+  await expectGuestCardsToRemainFourByFive(page);
 }
 
 async function verifyFirstGuest(page: Page) {
@@ -45,11 +64,13 @@ async function verifyFirstGuest(page: Page) {
     .check();
   await page.getByRole("button", { name: /Tiếp tục/ }).click();
   await expect(page.getByLabel("Họ và tên đầy đủ")).toBeFocused();
+  await expectNoHorizontalOverflow(page);
   await page.getByLabel("Họ và tên đầy đủ").fill("Nguyễn Văn An");
   await page.getByRole("button", { name: /Xác minh/ }).click();
   await expect(
     page.getByRole("heading", { name: "Bạn sẽ tham dự chứ?" }),
   ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 }
 
 test.beforeEach(async ({ context, request }, testInfo) => {
@@ -74,21 +95,29 @@ test("completes an attending RSVP responsively and opens the approved map", asyn
   const mapLink = page.getByRole("link", { name: /Mở Google Maps/ });
   await expect(mapLink).toHaveAttribute("href", MAP_URL);
   await expect(mapLink).toHaveAttribute("target", "_blank");
+  await expect(mapLink).toHaveAttribute("rel", "noreferrer");
+  let resolveMapRequest: (url: string) => void;
+  const mapRequest = new Promise<string>((resolve) => {
+    resolveMapRequest = resolve;
+  });
+  await page.context().route("https://maps.app.goo.gl/**", async (route) => {
+    resolveMapRequest(route.request().url());
+    await route.abort("blockedbyclient");
+  });
   const popupPromise = page.waitForEvent("popup");
   await mapLink.click();
-  const popup = await popupPromise;
-  await expect.poll(() => popup.url()).toContain("google.com/maps");
+  const [popup, requestedMapUrl] = await Promise.all([
+    popupPromise,
+    mapRequest,
+  ]);
+  expect(requestedMapUrl).toBe(MAP_URL);
   await popup.close();
 
   const expectedViewport = testInfo.project.name.startsWith("mobile")
     ? { width: 390, height: 844 }
     : { width: 1440, height: 1000 };
   expect(page.viewportSize()).toEqual(expectedViewport);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
+  await expectNoHorizontalOverflow(page);
 });
 
 test("declines without a message and records intentional response history", async ({
@@ -99,6 +128,7 @@ test("declines without a message and records intentional response history", asyn
   await page.getByRole("radio", { name: "Không tham dự", exact: true }).check();
   await page.getByRole("button", { name: "Gửi phản hồi" }).click();
   await expect(page.getByText(/Tiếc một chút/)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
   await page.getByRole("button", { name: "Gửi phản hồi mới" }).click();
   await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
@@ -109,6 +139,7 @@ test("declines without a message and records intentional response history", asyn
   await expect(
     page.getByRole("heading", { name: "Cảm ơn bạn." }),
   ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
   const stateResponse = await request.get("/api/test/rsvp-state", {
@@ -143,6 +174,7 @@ test("rejects the wrong name and returns focus to the verification field", async
     page.getByText("Thông tin chưa khớp với ảnh đã chọn."),
   ).toBeVisible();
   await expect(nameInput).toBeFocused();
+  await expectNoHorizontalOverflow(page);
 });
 
 test("retries a lost response with the same submission id and deduplicates", async ({
@@ -167,10 +199,12 @@ test("retries a lost response with the same submission id and deduplicates", asy
 
   await page.getByRole("button", { name: "Gửi phản hồi" }).click();
   await expect(page.getByRole("button", { name: "Thử gửi lại" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
   await page.getByRole("button", { name: "Thử gửi lại" }).click();
   await expect(
     page.getByRole("heading", { name: "Cảm ơn bạn." }),
   ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
   const stateResponse = await request.get("/api/test/rsvp-state", {
@@ -218,4 +252,5 @@ test("supports keyboard radio selection, visible focus, validation focus, and re
   await expect(
     page.getByText("Vui lòng chọn tham dự hoặc không tham dự."),
   ).toBeVisible();
+  await expectNoHorizontalOverflow(page);
 });

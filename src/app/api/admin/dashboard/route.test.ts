@@ -27,9 +27,9 @@ const DASHBOARD = {
   ],
 };
 
-function request() {
+function request(workerScope = "  worker-8  ") {
   return new Request("http://localhost/api/admin/dashboard", {
-    headers: { "x-e2e-worker-id": "worker-8" },
+    headers: { "x-e2e-worker-id": workerScope },
   });
 }
 
@@ -59,5 +59,14 @@ describe("GET /api/admin/dashboard", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(DASHBOARD);
     expect(getAdminDashboard).toHaveBeenCalledWith("worker-8");
+  });
+
+  it("does not pass a malformed worker scope to the repository", async () => {
+    vi.mocked(readAdminSession).mockResolvedValue(true);
+    vi.mocked(getAdminDashboard).mockResolvedValue(DASHBOARD);
+
+    await GET(request("contains spaces"));
+
+    expect(getAdminDashboard).toHaveBeenCalledWith(undefined);
   });
 });

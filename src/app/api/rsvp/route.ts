@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { jsonError, parseJson } from "@/lib/api-response";
-import { E2E_WORKER_HEADER } from "@/lib/e2e-mode";
+import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 import {
   createSubmissionWithMetadata,
   SubmissionIdConflictError,
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         message: parsed.data.message,
         clientSubmissionId: parsed.data.clientSubmissionId,
       },
-      request.headers.get(E2E_WORKER_HEADER) ?? undefined,
+      normalizeE2eWorkerScope(request.headers.get(E2E_WORKER_HEADER)),
     );
 
     return NextResponse.json(result);

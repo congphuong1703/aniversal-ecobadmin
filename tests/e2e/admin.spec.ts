@@ -1,4 +1,9 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 
 function workerScope(projectName: string, workerIndex: number) {
   return `pw-${projectName}-${workerIndex}`;
@@ -34,6 +39,14 @@ async function seedAdminHistory(request: APIRequestContext, scope: string) {
   expect(response.status()).toBe(200);
 }
 
+async function expectNoHorizontalOverflow(page: Page) {
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+}
+
 test.beforeEach(async ({ context, request }, testInfo) => {
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
   await context.setExtraHTTPHeaders({ "x-e2e-worker-id": scope });
@@ -44,6 +57,7 @@ test("handles login failure and success, dashboard history, and logout", async (
   page,
 }) => {
   await page.goto("/admin");
+  await expectNoHorizontalOverflow(page);
   const password = page.getByLabel("Mật khẩu quản trị");
   await password.fill("wrong-password");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
@@ -59,14 +73,20 @@ test("handles login failure and success, dashboard history, and logout", async (
   ).toBeVisible();
 
   const summary = page.locator('[aria-label="Tổng quan phản hồi"]');
-  await expect(summary.getByText("20", { exact: true })).toBeVisible();
-  await expect(summary.getByText("1", { exact: true })).toHaveCount(2);
-  await expect(summary.getByText("18", { exact: true })).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
+  const expectedMetrics = [
+    ["Tổng khách", "20"],
+    ["Tham dự", "1"],
+    ["Không tham dự", "1"],
+    ["Chưa phản hồi", "18"],
+  ] as const;
+
+  for (const [index, [label, value]] of expectedMetrics.entries()) {
+    const card = summary.locator(".admin-summary-card").nth(index);
+    await expect(card.locator("dt")).toHaveText(label);
+    await expect(card.locator("dd")).toHaveText(value);
+  }
+
+  await expectNoHorizontalOverflow(page);
 
   const disclosure = page.getByRole("button", {
     name: "Xem lịch sử Nguyễn Văn An",
@@ -82,6 +102,7 @@ test("handles login failure and success, dashboard history, and logout", async (
     "Không tham dự",
   );
   await expect(history).toContainText("Phản hồi đầu tiên");
+  await expectNoHorizontalOverflow(page);
 
   await page.getByRole("button", { name: /Đăng xuất/ }).click();
   await expect(

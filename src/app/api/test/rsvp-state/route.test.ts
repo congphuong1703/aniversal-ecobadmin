@@ -7,10 +7,14 @@ import { GET } from "./route";
 
 const WORKER_ID = "worker-4";
 
-function stateRequest(workerId = WORKER_ID) {
-  return new Request("http://localhost/api/test/rsvp-state", {
-    headers: { "x-e2e-worker-id": workerId },
-  });
+function stateRequest(workerId: string | null = WORKER_ID) {
+  const headers = new Headers();
+
+  if (workerId !== null) {
+    headers.set("x-e2e-worker-id", workerId);
+  }
+
+  return new Request("http://localhost/api/test/rsvp-state", { headers });
 }
 
 describe.sequential("GET /api/test/rsvp-state", () => {
@@ -59,4 +63,16 @@ describe.sequential("GET /api/test/rsvp-state", () => {
       ],
     });
   });
+
+  it.each([null, "contains spaces", "x".repeat(65)])(
+    "returns 404 for missing or malformed worker scope %#",
+    async (scope) => {
+      vi.stubEnv("NODE_ENV", "test");
+      vi.stubEnv("E2E_REPOSITORY", "memory");
+
+      const response = await GET(stateRequest(scope));
+
+      expect(response.status).toBe(404);
+    },
+  );
 });

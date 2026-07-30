@@ -43,7 +43,9 @@ const DASHBOARD = {
 describe("AdminPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    headers.mockResolvedValue(new Headers({ "x-e2e-worker-id": "worker-9" }));
+    headers.mockResolvedValue(
+      new Headers({ "x-e2e-worker-id": "  worker-9  " }),
+    );
   });
 
   afterEach(cleanup);

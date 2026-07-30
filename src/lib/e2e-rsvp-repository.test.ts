@@ -47,6 +47,22 @@ describe("E2E RSVP persistence", () => {
     await expect(getE2eRsvpState("worker-0")).resolves.toHaveLength(1);
   });
 
+  it("deduplicates concurrent inserts with the same client submission id", async () => {
+    const persistence = getE2eRsvpPersistence("worker-0");
+
+    const results = await Promise.all([
+      persistence.insertSubmissionWithMetadata(FIRST_SUBMISSION),
+      persistence.insertSubmissionWithMetadata(FIRST_SUBMISSION),
+    ]);
+
+    expect(results.map(({ deduplicated }) => deduplicated).sort()).toEqual([
+      false,
+      true,
+    ]);
+    expect(results[0]?.row).toEqual(results[1]?.row);
+    await expect(getE2eRsvpState("worker-0")).resolves.toHaveLength(1);
+  });
+
   it("clears existing rows and restarts deterministic identifiers", async () => {
     const persistence = getE2eRsvpPersistence("worker-0");
     await persistence.insertSubmission(FIRST_SUBMISSION);

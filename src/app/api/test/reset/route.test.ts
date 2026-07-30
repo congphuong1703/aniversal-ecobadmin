@@ -27,6 +27,19 @@ function resetRequest() {
   });
 }
 
+function requestWithWorkerScope(scope?: string) {
+  const request = resetRequest();
+  const headers = new Headers(request.headers);
+
+  if (scope === undefined) {
+    headers.delete("x-e2e-worker-id");
+  } else {
+    headers.set("x-e2e-worker-id", scope);
+  }
+
+  return new Request(request, { headers });
+}
+
 describe.sequential("POST /api/test/reset", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -64,4 +77,16 @@ describe.sequential("POST /api/test/reset", () => {
     ]);
     await expect(getE2eRsvpState("worker-3")).resolves.toEqual([]);
   });
+
+  it.each([undefined, "contains spaces", "x".repeat(65)])(
+    "returns 404 for missing or malformed worker scope %#",
+    async (scope) => {
+      vi.stubEnv("NODE_ENV", "test");
+      vi.stubEnv("E2E_REPOSITORY", "memory");
+
+      const response = await POST(requestWithWorkerScope(scope));
+
+      expect(response.status).toBe(404);
+    },
+  );
 });

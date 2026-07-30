@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
-import { E2E_WORKER_HEADER } from "@/lib/e2e-mode";
+import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 
 export const e2eResetSchema = z.object({
   submissions: z
@@ -19,11 +19,5 @@ export const e2eResetSchema = z.object({
 });
 
 export function readE2eWorkerScope(request: Request) {
-  const scope = request.headers.get(E2E_WORKER_HEADER)?.trim();
-
-  if (!scope || !/^[a-zA-Z0-9_-]{1,64}$/.test(scope)) {
-    return null;
-  }
-
-  return scope;
+  return normalizeE2eWorkerScope(request.headers.get(E2E_WORKER_HEADER));
 }
