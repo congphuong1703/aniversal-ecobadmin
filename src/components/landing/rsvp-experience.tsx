@@ -83,6 +83,7 @@ export function RsvpExperience() {
   const [status, setStatus] = useState("Đang tải danh sách khách mời…");
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const firstGuestInputRef = useRef<HTMLInputElement>(null);
   const attendingInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -150,6 +151,9 @@ export function RsvpExperience() {
 
   function continueToVerification() {
     if (!selectedGuest) {
+      setError("Vui lòng chọn ảnh của bạn.");
+      setStatus("Chưa chọn khách mời.");
+      firstGuestInputRef.current?.focus();
       return;
     }
 
@@ -343,7 +347,10 @@ export function RsvpExperience() {
           continueToVerification();
         }}
       >
-        <fieldset>
+        <fieldset
+          aria-describedby={error ? "guest-selection-error" : undefined}
+          aria-invalid={error ? "true" : undefined}
+        >
           <legend className="sr-only">
             Chọn ảnh của bạn trong danh sách khách mời
           </legend>
@@ -357,6 +364,7 @@ export function RsvpExperience() {
                     setSelectedGuestId(guest.id);
                     setError("");
                   }}
+                  ref={index === 0 ? firstGuestInputRef : undefined}
                   type="radio"
                   value={guest.id}
                 />
@@ -378,11 +386,14 @@ export function RsvpExperience() {
             ))}
           </div>
         </fieldset>
+        {error ? (
+          <FormError id="guest-selection-error">{error}</FormError>
+        ) : null}
         <div className="rsvp-selection-action">
           <p>Chỉ tên đã che được hiển thị công khai.</p>
           <button
+            aria-disabled={!selectedGuestId}
             className="button-primary"
-            disabled={!selectedGuestId}
             type="submit"
           >
             Tiếp tục <span aria-hidden="true">→</span>
@@ -566,7 +577,13 @@ export function RsvpExperience() {
             className="button-ghost"
             disabled={isSubmitting}
             type="button"
-            onClick={() => setStep("verifying")}
+            onClick={() => {
+              if (failed && submissionId) {
+                setResumeSubmissionAfterVerification(true);
+              }
+
+              setStep("verifying");
+            }}
           >
             Quay lại
           </button>

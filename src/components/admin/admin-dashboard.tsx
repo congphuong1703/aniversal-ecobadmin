@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type {
@@ -12,7 +12,10 @@ import type {
 type AdminDashboardProps = {
   summary: DashboardSummary;
   guests: AdminGuestRow[];
+  sessionExpiresAt: number;
 };
+
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 const timestampFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Ho_Chi_Minh",
@@ -50,13 +53,77 @@ function responseClass(submission: RsvpSubmission | null) {
   return submission.attending ? "is-attending" : "is-declined";
 }
 
-export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
+export function AdminDashboard({
+  summary,
+  guests,
+  sessionExpiresAt,
+}: AdminDashboardProps) {
   const router = useRouter();
+  const expiresAtMs = sessionExpiresAt * 1000;
+  const [sessionExpired, setSessionExpired] = useState(
+    () => Date.now() >= expiresAtMs,
+  );
   const [expandedGuestIds, setExpandedGuestIds] = useState<Set<string>>(
     () => new Set(),
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+
+  useEffect(() => {
+    if (sessionExpired) {
+      return;
+    }
+
+    let timer: number | undefined;
+
+    function expireIfNeeded() {
+      if (Date.now() >= expiresAtMs) {
+        setSessionExpired(true);
+        return true;
+      }
+
+      return false;
+    }
+
+    function scheduleExpiryCheck() {
+      const remaining = expiresAtMs - Date.now();
+      timer = window.setTimeout(
+        () => {
+          if (!expireIfNeeded()) {
+            scheduleExpiryCheck();
+          }
+        },
+        Math.min(Math.max(remaining, 0), MAX_TIMER_DELAY_MS),
+      );
+    }
+
+    function checkAfterTabResume() {
+      expireIfNeeded();
+    }
+
+    if (!expireIfNeeded()) {
+      scheduleExpiryCheck();
+    }
+    window.addEventListener("focus", checkAfterTabResume);
+    document.addEventListener("visibilitychange", checkAfterTabResume);
+
+    return () => {
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
+      window.removeEventListener("focus", checkAfterTabResume);
+      document.removeEventListener("visibilitychange", checkAfterTabResume);
+    };
+  }, [expiresAtMs, sessionExpired]);
+
+  useEffect(() => {
+    if (!sessionExpired) {
+      return;
+    }
+
+    router.replace("/admin");
+    router.refresh();
+  }, [router, sessionExpired]);
 
   function toggleHistory(guestId: string) {
     setExpandedGuestIds((current) => {
@@ -98,6 +165,10 @@ export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
     { label: "Chưa phản hồi", value: summary.pending, tone: "pending" },
   ];
 
+  if (sessionExpired) {
+    return null;
+  }
+
   return (
     <main className="admin-page admin-dashboard-page">
       <header className="admin-header">
@@ -125,7 +196,10 @@ export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
       </header>
 
       <div className="admin-dashboard-shell">
-        <section className="admin-dashboard-heading" aria-labelledby="admin-title">
+        <section
+          className="admin-dashboard-heading"
+          aria-labelledby="admin-title"
+        >
           <div>
             <span className="eyebrow">Kỷ niệm một năm</span>
             <h1 className="font-display" id="admin-title">
@@ -133,13 +207,17 @@ export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
             </h1>
           </div>
           <p>
-            Trạng thái hiện tại lấy từ lần gửi mới nhất. Mở từng khách mời để xem lại toàn bộ lịch sử.
+            Trạng thái hiện tại lấy từ lần gửi mới nhất. Mở từng khách mời để
+            xem lại toàn bộ lịch sử.
           </p>
         </section>
 
         <dl className="admin-summary" aria-label="Tổng quan phản hồi">
           {metrics.map((metric, index) => (
-            <div className={`admin-summary-card is-${metric.tone}`} key={metric.label}>
+            <div
+              className={`admin-summary-card is-${metric.tone}`}
+              key={metric.label}
+            >
               <span aria-hidden="true">0{index + 1}</span>
               <dt>{metric.label}</dt>
               <dd>
@@ -149,7 +227,10 @@ export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
           ))}
         </dl>
 
-        <section className="admin-guest-section" aria-labelledby="guest-list-title">
+        <section
+          className="admin-guest-section"
+          aria-labelledby="guest-list-title"
+        >
           <div className="admin-list-heading">
             <div>
               <span className="eyebrow">Danh sách đầy đủ</span>
@@ -160,7 +241,10 @@ export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
             <p>{summary.total} khách mời</p>
           </div>
 
-          <table className="admin-table" aria-label="Danh sách phản hồi khách mời">
+          <table
+            className="admin-table"
+            aria-label="Danh sách phản hồi khách mời"
+          >
             <thead>
               <tr>
                 <th scope="col">Khách mời</th>
@@ -209,8 +293,11 @@ export function AdminDashboard({ summary, guests }: AdminDashboardProps) {
                             onClick={() => toggleHistory(guest.id)}
                             type="button"
                           >
-                            {expanded ? "Thu gọn" : "Xem lịch sử"} {guest.fullName}
-                            <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+                            {expanded ? "Thu gọn" : "Xem lịch sử"}{" "}
+                            {guest.fullName}
+                            <span aria-hidden="true">
+                              {expanded ? "−" : "+"}
+                            </span>
                           </button>
                         ) : (
                           <span className="admin-empty">Chưa có</span>

@@ -1,15 +1,31 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AdminGuestRow, DashboardSummary } from "@/lib/rsvp-repository";
 import { AdminDashboard } from "./admin-dashboard";
 
-const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+const { refresh, replace, router } = vi.hoisted(() => {
+  const refresh = vi.fn();
+  const replace = vi.fn();
+
+  return { refresh, replace, router: { refresh, replace } };
+});
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh }),
+  useRouter: () => router,
 }));
+
+const SESSION_EXPIRES_AT = Date.parse("2050-07-29T10:00:00.000Z") / 1000;
+const EXPIRING_SESSION_EXPIRES_AT =
+  Date.parse("2026-07-29T10:00:00.000Z") / 1000;
 
 const SUMMARY: DashboardSummary = {
   total: 2,
@@ -65,16 +81,24 @@ describe("AdminDashboard", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     refresh.mockReset();
+    replace.mockReset();
     vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("renders all summary values, the latest RSVP, and pending guests in a semantic table", () => {
-    render(<AdminDashboard summary={SUMMARY} guests={GUESTS} />);
+    render(
+      <AdminDashboard
+        sessionExpiresAt={SESSION_EXPIRES_AT}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
 
     const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
     expect(table).toBeInTheDocument();
@@ -90,7 +114,13 @@ describe("AdminDashboard", () => {
 
   it("opens newest-first full history with optional comments by keyboard", async () => {
     const user = userEvent.setup();
-    render(<AdminDashboard summary={SUMMARY} guests={GUESTS} />);
+    render(
+      <AdminDashboard
+        sessionExpiresAt={SESSION_EXPIRES_AT}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
 
     const disclosure = screen.getByRole("button", {
       name: /xem lịch sử.*nguyễn văn an/i,
@@ -139,6 +169,7 @@ describe("AdminDashboard", () => {
 
     render(
       <AdminDashboard
+        sessionExpiresAt={SESSION_EXPIRES_AT}
         summary={{ total: 1, attending: 0, declined: 1, pending: 0 }}
         guests={[
           {
@@ -170,7 +201,13 @@ describe("AdminDashboard", () => {
       new Response(JSON.stringify({ authenticated: false }), { status: 200 }),
     );
     const user = userEvent.setup();
-    render(<AdminDashboard summary={SUMMARY} guests={GUESTS} />);
+    render(
+      <AdminDashboard
+        sessionExpiresAt={SESSION_EXPIRES_AT}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: /đăng xuất/i }));
 
@@ -178,5 +215,60 @@ describe("AdminDashboard", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/logout", {
       method: "POST",
     });
+  });
+
+  it("unmounts private data at the exact session boundary before navigating", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T09:59:59.000Z"));
+    replace.mockImplementation(() => {
+      expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Mình có lịch công tác."),
+      ).not.toBeInTheDocument();
+    });
+    render(
+      <AdminDashboard
+        sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
+
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999);
+    });
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Mình có lịch công tác."),
+    ).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/admin");
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("checks expiry again when a suspended tab regains focus", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T09:00:00.000Z"));
+    render(
+      <AdminDashboard
+        sessionExpiresAt={EXPIRING_SESSION_EXPIRES_AT}
+        summary={SUMMARY}
+        guests={GUESTS}
+      />,
+    );
+
+    vi.setSystemTime(new Date("2026-07-29T10:00:00.000Z"));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith("/admin");
   });
 });

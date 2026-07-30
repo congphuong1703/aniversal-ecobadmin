@@ -55,7 +55,9 @@ Open the Supabase SQL editor and run:
 supabase/migrations/202607290001_create_rsvp_submissions.sql
 ```
 
-The migration is idempotent: it uses `create extension if not exists`, `create table if not exists`, and `create index if not exists`. It enables row-level security and intentionally creates no public policies. The app reads and writes through the server-only service-role client.
+The migration is idempotent: it uses `create extension if not exists`, `create table if not exists`, and `create index if not exists`, plus `create or replace function` for the atomic rate-limit RPC. It creates both the guest-history index and the global dashboard keyset index on `(created_at desc, id desc)`.
+
+Row-level security is enabled for RSVP submissions and rate-limit buckets, with no public policies. The rate-limit table stores only HMAC-SHA256 bucket hashes, and its atomic fixed-window RPC revokes execution from `public`, `anon`, and `authenticated`; only the server-side `service_role` may execute it. Re-running the migration safely preserves existing RSVP data and updates the RPC definition.
 
 ## Configure the environment
 
@@ -75,7 +77,22 @@ Set these five server-side variables locally and in Vercel:
 | `ADMIN_SESSION_SECRET`      | Secret used to sign the eight-hour admin session cookie                   |
 | `RSVP_VERIFICATION_SECRET`  | Separate secret used to sign short-lived guest verification tokens        |
 
-Use independent, high-entropy values for the two signing secrets. Do not commit `.env.local` or real credentials.
+Production startup requires `ADMIN_PASSWORD` to contain at least 12 characters and each signing secret to contain at least 32 characters. Use independent, randomly generated high-entropy values; length is only the enforced minimum. Non-production and Playwright fixtures may remain shorter. Do not commit `.env.local` or real credentials.
+
+## Public API rate limits
+
+The public security boundaries use durable, atomic Supabase buckets in production:
+
+| Boundary                   | Policy                                        |
+| -------------------------- | --------------------------------------------- |
+| Admin login                | 5 attempts per 10 minutes per client          |
+| Guest verification         | 20 attempts per 10 minutes per client         |
+| RSVP writes                | 20 attempts per 10 minutes per client         |
+| RSVP writes by verified ID | 20 attempts per 10 minutes per verified guest |
+
+Client addresses are taken from trusted Vercel/proxy headers with a fail-safe shared fallback. Client addresses and verified guest IDs are HMAC-hashed before persistence; passwords, names, verification tokens, and raw IP addresses are never stored in rate-limit buckets. Exceeded limits return structured `429` JSON with `Retry-After`. If the limiter cannot be checked, the endpoint fails closed with generic structured `503` JSON.
+
+Playwright uses worker-isolated in-memory buckets and resets them with the existing runtime-guarded E2E reset route, so no live Supabase project is needed and production test routes remain unavailable.
 
 `E2E_REPOSITORY=memory` is reserved for the Playwright dev server. The application ignores it in production, test-only endpoints return `404` outside explicit non-production E2E mode, and this variable must not be configured in Vercel.
 
@@ -99,7 +116,7 @@ npm run test:e2e
 npm run build
 ```
 
-Playwright starts its own isolated server on port `3108`, uses only the in-memory repository, and covers Chromium at `1440x1000` plus a Chromium mobile viewport at `390x844`. It checks horizontal overflow, `4:5` guest cards, keyboard/focus behavior, reduced motion, RSVP retry deduplication, intentional history, the approved Maps link, and the admin flow.
+Playwright starts its own isolated server on port `3108`, uses only the in-memory repository and rate limiter, and covers Chromium at `1440x1000` plus a Chromium mobile viewport at `390x844`. It checks horizontal overflow, `4:5` guest cards, keyboard/focus behavior, reduced motion, RSVP retry deduplication through re-verification, intentional history, the approved Maps link, and the admin flow.
 
 The production build finishes by scanning every JavaScript file in `.next/static` for all 20 configured full guest names. The build fails if any full name enters a client bundle.
 

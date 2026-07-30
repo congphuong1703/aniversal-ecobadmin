@@ -11,6 +11,7 @@ import {
   clearAdminSession,
   createAdminSession,
   readAdminSession,
+  readAdminSessionMetadata,
   signAdminSessionToken,
   verifyAdminSessionToken,
 } from "./admin-session";
@@ -61,12 +62,7 @@ describe("admin sessions", () => {
       aud: "admin",
     });
     expect(payload.exp! - payload.iat!).toBe(8 * 60 * 60);
-    expect(Object.keys(payload).sort()).toEqual([
-      "aud",
-      "exp",
-      "iat",
-      "iss",
-    ]);
+    expect(Object.keys(payload).sort()).toEqual(["aud", "exp", "iat", "iss"]);
 
     vi.setSystemTime(new Date(NOW.getTime() + 8 * 60 * 60 * 1000 - 1));
     await expect(
@@ -74,7 +70,7 @@ describe("admin sessions", () => {
         secret: ADMIN_SECRET,
         now: () => new Date(),
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ expiresAt: payload.exp });
 
     vi.setSystemTime(new Date(NOW.getTime() + 8 * 60 * 60 * 1000));
     await expect(
@@ -135,9 +131,13 @@ describe("admin sessions", () => {
 
     cookieStore.get.mockReturnValue({ value: token });
     await expect(readAdminSession()).resolves.toBe(true);
+    await expect(readAdminSessionMetadata()).resolves.toEqual({
+      expiresAt: Math.floor(NOW.getTime() / 1000) + 8 * 60 * 60,
+    });
 
     cookieStore.get.mockReturnValue({ value: `${token}tampered` });
     await expect(readAdminSession()).resolves.toBe(false);
+    await expect(readAdminSessionMetadata()).resolves.toBeNull();
   });
 
   it("returns false when the admin cookie is absent", async () => {
@@ -147,6 +147,7 @@ describe("admin sessions", () => {
     );
 
     await expect(readAdminSession()).resolves.toBe(false);
+    await expect(readAdminSessionMetadata()).resolves.toBeNull();
   });
 
   it("clears the admin cookie by its exact name", async () => {

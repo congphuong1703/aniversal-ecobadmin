@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readAdminSession } from "@/lib/admin-session";
+import { readAdminSessionMetadata } from "@/lib/admin-session";
 import { getAdminDashboard } from "@/lib/rsvp-repository";
 import AdminPage from "./page";
 
@@ -10,7 +10,7 @@ const { headers } = vi.hoisted(() => ({ headers: vi.fn() }));
 vi.mock("next/headers", () => ({ headers }));
 
 vi.mock("@/lib/admin-session", () => ({
-  readAdminSession: vi.fn(),
+  readAdminSessionMetadata: vi.fn(),
 }));
 
 vi.mock("@/lib/rsvp-repository", () => ({
@@ -22,8 +22,17 @@ vi.mock("@/components/admin/admin-login", () => ({
 }));
 
 vi.mock("@/components/admin/admin-dashboard", () => ({
-  AdminDashboard: ({ guests }: { guests: { fullName: string }[] }) => (
-    <div>{guests.map((guest) => guest.fullName).join(", ")}</div>
+  AdminDashboard: ({
+    guests,
+    sessionExpiresAt,
+  }: {
+    guests: { fullName: string }[];
+    sessionExpiresAt: number;
+  }) => (
+    <div>
+      <span>{guests.map((guest) => guest.fullName).join(", ")}</span>
+      <span>expires at {sessionExpiresAt}</span>
+    </div>
   ),
 }));
 
@@ -51,7 +60,7 @@ describe("AdminPage", () => {
   afterEach(cleanup);
 
   it("renders only login and never fetches dashboard data without a valid session", async () => {
-    vi.mocked(readAdminSession).mockResolvedValue(false);
+    vi.mocked(readAdminSessionMetadata).mockResolvedValue(null);
 
     render(await AdminPage());
 
@@ -61,12 +70,15 @@ describe("AdminPage", () => {
   });
 
   it("loads full-name dashboard data only after the server session is valid", async () => {
-    vi.mocked(readAdminSession).mockResolvedValue(true);
+    vi.mocked(readAdminSessionMetadata).mockResolvedValue({
+      expiresAt: 1_788_000_000,
+    });
     vi.mocked(getAdminDashboard).mockResolvedValue(DASHBOARD);
 
     render(await AdminPage());
 
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(screen.getByText(/expires at 1788000000/i)).toBeInTheDocument();
     expect(getAdminDashboard).toHaveBeenCalledWith("worker-9");
   });
 });

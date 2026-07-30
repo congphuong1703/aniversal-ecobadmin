@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 
 import { createAdminSession } from "@/lib/admin-session";
 import { jsonError, parseJson } from "@/lib/api-response";
+import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 import { getEnv } from "@/lib/env";
+import { enforceRateLimit, RATE_LIMIT_POLICIES } from "@/lib/rate-limit";
 import { loginInputSchema } from "@/lib/rsvp-schema";
 
 function passwordDigest(value: string) {
@@ -12,6 +14,15 @@ function passwordDigest(value: string) {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResponse = await enforceRateLimit(request, {
+    e2eScope: normalizeE2eWorkerScope(request.headers.get(E2E_WORKER_HEADER)),
+    policy: RATE_LIMIT_POLICIES.adminLogin,
+  });
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const parsed = await parseJson(request, loginInputSchema);
 
   if ("response" in parsed) {

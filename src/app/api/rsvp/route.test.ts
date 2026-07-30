@@ -1,7 +1,9 @@
 // @vitest-environment node
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
 
+import { enforceRateLimit, RATE_LIMIT_POLICIES } from "@/lib/rate-limit";
 import {
   createSubmissionWithMetadata,
   SubmissionIdConflictError,
@@ -19,6 +21,11 @@ vi.mock("@/lib/verification-token", () => ({
   verifyVerificationToken: vi.fn(),
 }));
 
+vi.mock("@/lib/rate-limit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
+  return { ...actual, enforceRateLimit: vi.fn() };
+});
+
 const CLIENT_SUBMISSION_ID = "10000000-0000-4000-8000-000000000001";
 const SUBMISSION = {
   id: "20000000-0000-4000-8000-000000000001",
@@ -29,11 +36,15 @@ const SUBMISSION = {
   createdAt: "2026-07-29T02:00:00.000Z",
 };
 
-function request(body: unknown, workerScope = "  worker-7  ") {
+function request(
+  body: unknown,
+  workerScope = "  worker-7  ",
+  contentType = "application/json",
+) {
   return new Request("http://localhost/api/rsvp", {
     method: "POST",
     headers: {
-      "content-type": "application/json",
+      "content-type": contentType,
       "x-e2e-worker-id": workerScope,
     },
     body: JSON.stringify(body),
@@ -52,6 +63,7 @@ function validBody() {
 describe("POST /api/rsvp", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(enforceRateLimit).mockResolvedValue(null);
     vi.mocked(verifyVerificationToken).mockResolvedValue("guest-07");
     vi.mocked(createSubmissionWithMetadata).mockResolvedValue({
       submission: SUBMISSION,
@@ -60,7 +72,8 @@ describe("POST /api/rsvp", () => {
   });
 
   it("derives the guest id from the verified token and returns repository metadata", async () => {
-    const response = await POST(request(validBody()));
+    const rsvpRequest = request(validBody());
+    const response = await POST(rsvpRequest);
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
@@ -76,6 +89,15 @@ describe("POST /api/rsvp", () => {
       },
       "worker-7",
     );
+    expect(enforceRateLimit).toHaveBeenNthCalledWith(1, rsvpRequest, {
+      e2eScope: "worker-7",
+      policy: RATE_LIMIT_POLICIES.rsvpWriteClient,
+    });
+    expect(enforceRateLimit).toHaveBeenNthCalledWith(2, rsvpRequest, {
+      e2eScope: "worker-7",
+      identifier: "guest-07",
+      policy: RATE_LIMIT_POLICIES.rsvpWriteGuest,
+    });
   });
 
   it.each(["invalid", "expired"])(
@@ -162,5 +184,45 @@ describe("POST /api/rsvp", () => {
     expect(serialized).not.toContain("false");
     expect(serialized).not.toContain("Private response");
     expect(serialized).not.toContain("signed-token");
+  });
+
+  it("returns a client limiter response before verifying a token", async () => {
+    const limited = NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many requests." } },
+      { status: 429, headers: { "Retry-After": "600" } },
+    );
+    vi.mocked(enforceRateLimit).mockResolvedValueOnce(limited);
+
+    const response = await POST(request(validBody()));
+
+    expect(response).toBe(limited);
+    expect(verifyVerificationToken).not.toHaveBeenCalled();
+    expect(createSubmissionWithMetadata).not.toHaveBeenCalled();
+  });
+
+  it("returns a guest limiter response before writing an RSVP", async () => {
+    const limited = NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many requests." } },
+      { status: 429, headers: { "Retry-After": "600" } },
+    );
+    vi.mocked(enforceRateLimit)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(limited);
+
+    const response = await POST(request(validBody()));
+
+    expect(response).toBe(limited);
+    expect(verifyVerificationToken).toHaveBeenCalledOnce();
+    expect(createSubmissionWithMetadata).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-JSON RSVP writes before token verification", async () => {
+    const response = await POST(
+      request(validBody(), "worker-7", "application/x-www-form-urlencoded"),
+    );
+
+    expect(response.status).toBe(415);
+    expect(verifyVerificationToken).not.toHaveBeenCalled();
+    expect(createSubmissionWithMetadata).not.toHaveBeenCalled();
   });
 });

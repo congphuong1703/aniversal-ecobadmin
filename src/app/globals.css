@@ -254,8 +254,8 @@ button.button-ghost {
 }
 
 .hero-button:hover,
-.button-primary:hover:not(:disabled),
-.button-ghost:hover:not(:disabled) {
+.button-primary:hover:not(:disabled):not([aria-disabled="true"]),
+.button-ghost:hover:not(:disabled):not([aria-disabled="true"]) {
   transform: translateY(-2px);
 }
 
@@ -757,7 +757,9 @@ button.button-ghost {
 }
 
 .button-primary:disabled,
-.button-ghost:disabled {
+.button-ghost:disabled,
+.button-primary[aria-disabled="true"],
+.button-ghost[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.45;
 }

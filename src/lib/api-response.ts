@@ -27,6 +27,29 @@ export async function parseJson<T>(
   request: Request,
   schema: z.ZodType<T>,
 ): Promise<ParseJsonResult<T>> {
+  const mediaType = request.headers
+    .get("content-type")
+    ?.split(";", 1)[0]
+    ?.trim()
+    .toLowerCase();
+  const isJson =
+    mediaType === "application/json" ||
+    Boolean(
+      mediaType?.startsWith("application/") &&
+      mediaType.length > "application/+json".length &&
+      mediaType.endsWith("+json"),
+    );
+
+  if (!isJson) {
+    return {
+      response: jsonError(
+        415,
+        "UNSUPPORTED_MEDIA_TYPE",
+        "Content-Type must be application/json.",
+      ),
+    };
+  }
+
   let body: unknown;
 
   try {

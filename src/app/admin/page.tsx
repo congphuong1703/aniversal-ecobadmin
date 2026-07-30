@@ -2,22 +2,22 @@ import { headers } from "next/headers";
 
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AdminLogin } from "@/components/admin/admin-login";
-import { readAdminSession } from "@/lib/admin-session";
+import { readAdminSessionMetadata } from "@/lib/admin-session";
 import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 import { getAdminDashboard } from "@/lib/rsvp-repository";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  let authenticated = false;
+  let session = null;
 
   try {
-    authenticated = await readAdminSession();
+    session = await readAdminSessionMetadata();
   } catch {
     // Session configuration failures must fail closed without loading guest data.
   }
 
-  if (!authenticated) {
+  if (!session) {
     return <AdminLogin />;
   }
 
@@ -25,5 +25,11 @@ export default async function AdminPage() {
   const { summary, guests } = await getAdminDashboard(
     normalizeE2eWorkerScope(requestHeaders.get(E2E_WORKER_HEADER)),
   );
-  return <AdminDashboard guests={guests} summary={summary} />;
+  return (
+    <AdminDashboard
+      guests={guests}
+      sessionExpiresAt={session.expiresAt}
+      summary={summary}
+    />
+  );
 }

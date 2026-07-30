@@ -179,7 +179,7 @@ test("rejects the wrong name and returns focus to the verification field", async
   await expectNoHorizontalOverflow(page);
 });
 
-test("retries a lost response with the same submission id and deduplicates", async ({
+test("re-verifies from Back and resumes a lost response with the same submission id", async ({
   page,
   request,
 }, testInfo) => {
@@ -187,9 +187,13 @@ test("retries a lost response with the same submission id and deduplicates", asy
   await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
 
   let droppedResponse = false;
+  let originalSubmissionId = "";
   await page.route("**/api/rsvp", async (route) => {
     if (!droppedResponse) {
       droppedResponse = true;
+      originalSubmissionId = String(
+        route.request().postDataJSON().clientSubmissionId,
+      );
       const response = await route.fetch();
       expect(response.status()).toBe(200);
       await route.abort("failed");
@@ -202,7 +206,11 @@ test("retries a lost response with the same submission id and deduplicates", asy
   await page.getByRole("button", { name: "Gửi phản hồi" }).click();
   await expect(page.getByRole("button", { name: "Thử gửi lại" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  await page.getByRole("button", { name: "Thử gửi lại" }).click();
+  await page.getByRole("button", { name: "Quay lại" }).click();
+  await expect(page.getByLabel("Họ và tên đầy đủ")).toHaveValue(
+    E2E_FIRST_GUEST_NAME,
+  );
+  await page.getByRole("button", { name: /Xác minh/ }).click();
   await expect(
     page.getByRole("heading", { name: "Cảm ơn bạn." }),
   ).toBeVisible();
@@ -212,8 +220,11 @@ test("retries a lost response with the same submission id and deduplicates", asy
   const stateResponse = await request.get("/api/test/rsvp-state", {
     headers: { "x-e2e-worker-id": scope },
   });
-  const state = (await stateResponse.json()) as { submissions: unknown[] };
+  const state = (await stateResponse.json()) as {
+    submissions: Array<{ clientSubmissionId: string }>;
+  };
   expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0]?.clientSubmissionId).toBe(originalSubmissionId);
 });
 
 test("supports keyboard radio selection, visible focus, validation focus, and reduced motion", async ({

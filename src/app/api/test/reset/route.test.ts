@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getE2eRsvpState } from "@/lib/e2e-rsvp-repository";
+import { enforceRateLimit, resetE2eRateLimitState } from "@/lib/rate-limit";
 import { POST } from "./route";
 
 const WORKER_ID = "worker-2";
@@ -76,6 +77,27 @@ describe.sequential("POST /api/test/reset", () => {
       }),
     ]);
     await expect(getE2eRsvpState("worker-3")).resolves.toEqual([]);
+  });
+
+  it("resets the requesting worker's in-memory rate-limit buckets", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("E2E_REPOSITORY", "memory");
+    resetE2eRateLimitState(WORKER_ID);
+    const options = {
+      e2eScope: WORKER_ID,
+      hashSecret: "test-hash-secret",
+      identifier: "same-client",
+      policy: { bucket: "reset-test", limit: 1, windowSeconds: 600 },
+    };
+
+    await expect(enforceRateLimit(resetRequest(), options)).resolves.toBeNull();
+    await expect(
+      enforceRateLimit(resetRequest(), options),
+    ).resolves.toMatchObject({ status: 429 });
+
+    await POST(resetRequest());
+
+    await expect(enforceRateLimit(resetRequest(), options)).resolves.toBeNull();
   });
 
   it.each([undefined, "contains spaces", "x".repeat(65)])(

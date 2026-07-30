@@ -4,6 +4,7 @@ import { parseJson } from "@/lib/api-response";
 import { resetE2eRsvpState } from "@/lib/e2e-rsvp-repository";
 import { isE2eMemoryRepositoryEnabled } from "@/lib/e2e-mode";
 import { e2eResetSchema, readE2eWorkerScope } from "@/lib/e2e-test-api";
+import { resetE2eRateLimitState } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   if (!isE2eMemoryRepositoryEnabled()) {
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       client_submission_id: submission.clientSubmissionId,
     })),
   );
+  resetE2eRateLimitState(scope);
 
   return NextResponse.json({ reset: true });
 }

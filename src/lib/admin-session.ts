@@ -17,6 +17,10 @@ export type AdminSessionTokenDependencies = {
   now?: () => Date;
 };
 
+export type AdminSessionMetadata = {
+  expiresAt: number;
+};
+
 function encodeSecret(secret: string) {
   return new TextEncoder().encode(secret);
 }
@@ -42,13 +46,23 @@ export async function signAdminSessionToken(
 export async function verifyAdminSessionToken(
   token: string,
   dependencies: AdminSessionTokenDependencies,
-) {
-  await jwtVerify(token, encodeSecret(dependencies.secret), {
-    algorithms: [JWT_ALGORITHM],
-    issuer: TOKEN_ISSUER,
-    audience: ADMIN_AUDIENCE,
-    currentDate: currentDate(dependencies.now),
-  });
+): Promise<AdminSessionMetadata> {
+  const { payload } = await jwtVerify(
+    token,
+    encodeSecret(dependencies.secret),
+    {
+      algorithms: [JWT_ALGORITHM],
+      issuer: TOKEN_ISSUER,
+      audience: ADMIN_AUDIENCE,
+      currentDate: currentDate(dependencies.now),
+    },
+  );
+
+  if (typeof payload.exp !== "number") {
+    throw new Error("Admin session expiry is missing.");
+  }
+
+  return { expiresAt: payload.exp };
 }
 
 export async function createAdminSession() {
@@ -66,22 +80,25 @@ export async function createAdminSession() {
   });
 }
 
-export async function readAdminSession() {
+export async function readAdminSessionMetadata(): Promise<AdminSessionMetadata | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
-    return false;
+    return null;
   }
 
   const secret = getEnv().ADMIN_SESSION_SECRET;
 
   try {
-    await verifyAdminSessionToken(token, { secret });
-    return true;
+    return await verifyAdminSessionToken(token, { secret });
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function readAdminSession() {
+  return (await readAdminSessionMetadata()) !== null;
 }
 
 export async function clearAdminSession() {
