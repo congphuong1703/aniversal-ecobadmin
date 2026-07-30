@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { findGuestById } from "@/data/guests";
 import { jsonError, parseJson } from "@/lib/api-response";
+import { findGuestInActiveDirectory } from "@/lib/guest-directory";
 import { maskGuestName, normalizeGuestName } from "@/lib/guest-name";
 import { verifyInputSchema } from "@/lib/rsvp-schema";
 import { signVerificationToken } from "@/lib/verification-token";
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return parsed.response;
   }
 
-  const guest = findGuestById(parsed.data.guestId);
+  const guest = findGuestInActiveDirectory(parsed.data.guestId);
 
   if (
     !guest ||

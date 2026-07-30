@@ -6,8 +6,12 @@ import type { GuestRecord } from "@/data/guests";
 import { GUESTS } from "@/data/guests";
 import { getE2eRsvpPersistence } from "@/lib/e2e-rsvp-repository";
 import { isE2eMemoryRepositoryEnabled } from "@/lib/e2e-mode";
+import { getGuestDirectory } from "@/lib/guest-directory";
+import { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 import { rsvpMessageSchema } from "@/lib/rsvp-schema";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+
+export { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 
 export const rsvpSubmissionRowSchema = z.object({
   id: z.uuid(),
@@ -37,13 +41,6 @@ export type CreateSubmissionInput = {
   message?: string | null;
   clientSubmissionId: string;
 };
-
-export class SubmissionIdConflictError extends Error {
-  constructor() {
-    super("Submission ID is already in use.");
-    this.name = "SubmissionIdConflictError";
-  }
-}
 
 export type AdminGuestRow = GuestRecord & {
   currentSubmission: RsvpSubmission | null;
@@ -397,7 +394,10 @@ function activeRepository(scope = "default") {
     scope,
     production: productionRepository,
     createMemory: (memoryScope) =>
-      createRsvpRepository(getE2eRsvpPersistence(memoryScope)),
+      createRsvpRepository(
+        getE2eRsvpPersistence(memoryScope),
+        getGuestDirectory(),
+      ),
   });
 }
 

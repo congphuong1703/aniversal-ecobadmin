@@ -5,6 +5,8 @@ import {
   type Page,
 } from "@playwright/test";
 
+const E2E_FIRST_GUEST_NAME = "E2E Guest 01";
+
 function workerScope(projectName: string, workerIndex: number) {
   return `pw-${projectName}-${workerIndex}`;
 }
@@ -89,12 +91,12 @@ test("handles login failure and success, dashboard history, and logout", async (
   await expectNoHorizontalOverflow(page);
 
   const disclosure = page.getByRole("button", {
-    name: "Xem lịch sử Nguyễn Văn An",
+    name: `Xem lịch sử ${E2E_FIRST_GUEST_NAME}`,
   });
   await disclosure.focus();
   await page.keyboard.press("Enter");
   const history = page.getByRole("region", {
-    name: "Lịch sử phản hồi của Nguyễn Văn An",
+    name: `Lịch sử phản hồi của ${E2E_FIRST_GUEST_NAME}`,
   });
   await expect(history).toBeVisible();
   await expect(history.getByRole("listitem")).toHaveCount(2);

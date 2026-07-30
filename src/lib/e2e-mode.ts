@@ -1,6 +1,6 @@
 import "server-only";
 
-type E2eEnvironment = {
+export type E2eEnvironment = {
   NODE_ENV?: string;
   E2E_REPOSITORY?: string;
 };

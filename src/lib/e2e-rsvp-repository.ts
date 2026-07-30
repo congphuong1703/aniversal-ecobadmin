@@ -5,6 +5,7 @@ import type {
   RsvpSubmissionInsert,
   RsvpSubmissionRow,
 } from "@/lib/rsvp-repository";
+import { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 
 type MemoryStore = {
   rows: RsvpSubmissionRow[];
@@ -86,6 +87,10 @@ export function getE2eRsvpPersistence(scope: string): RsvpPersistenceAdapter {
       ) ?? null;
 
     if (existing) {
+      if (existing.guest_id !== input.guest_id) {
+        throw new SubmissionIdConflictError();
+      }
+
       return { row: existing, deduplicated: true };
     }
 

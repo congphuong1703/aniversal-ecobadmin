@@ -7,6 +7,7 @@ import {
   getE2eRsvpState,
   resetE2eRsvpState,
 } from "./e2e-rsvp-repository";
+import { SubmissionIdConflictError } from "./rsvp-repository";
 
 const FIRST_SUBMISSION = {
   guest_id: "guest-01",
@@ -60,6 +61,43 @@ describe("E2E RSVP persistence", () => {
       true,
     ]);
     expect(results[0]?.row).toEqual(results[1]?.row);
+    await expect(getE2eRsvpState("worker-0")).resolves.toHaveLength(1);
+  });
+
+  it("rejects concurrent cross-guest reuse of a client submission id without leaking data", async () => {
+    const persistence = getE2eRsvpPersistence("worker-0");
+    const conflictingSubmission = {
+      ...FIRST_SUBMISSION,
+      guest_id: "guest-02",
+      message: "Conflicting private message",
+    };
+
+    const results = await Promise.allSettled([
+      persistence.insertSubmissionWithMetadata(FIRST_SUBMISSION),
+      persistence.insertSubmissionWithMetadata(conflictingSubmission),
+    ]);
+    const fulfilled = results.filter(
+      (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof persistence.insertSubmissionWithMetadata>>> =>
+        result.status === "fulfilled",
+    );
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+
+    expect(fulfilled).toHaveLength(1);
+    expect(fulfilled[0]?.value.deduplicated).toBe(false);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]?.reason).toBeInstanceOf(SubmissionIdConflictError);
+    expect(rejected[0]?.reason).toMatchObject({
+      message: "Submission ID is already in use.",
+    });
+    expect(String(rejected[0]?.reason)).not.toContain(FIRST_SUBMISSION.guest_id);
+    expect(String(rejected[0]?.reason)).not.toContain(
+      conflictingSubmission.guest_id,
+    );
+    expect(String(rejected[0]?.reason)).not.toContain(
+      conflictingSubmission.message,
+    );
     await expect(getE2eRsvpState("worker-0")).resolves.toHaveLength(1);
   });
 

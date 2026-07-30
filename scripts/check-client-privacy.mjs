@@ -8,6 +8,15 @@ export function extractGuestFullNames(source) {
   );
 }
 
+export function extractE2eGuestFullNames(source) {
+  const namesBlock =
+    /export const E2E_GUEST_FULL_NAMES\s*=\s*\[([\s\S]*?)\]\s*as const/.exec(
+      source,
+    )?.[1] ?? "";
+
+  return [...namesBlock.matchAll(/"([^"]+)"/g)].map(([, name]) => name);
+}
+
 export function findLeakedGuestNames(names, bundleContents) {
   return names.filter((name) =>
     bundleContents.some((contents) => contents.includes(name)),
@@ -31,10 +40,17 @@ export function checkBuiltClientPrivacy(rootDirectory = process.cwd()) {
     join(rootDirectory, "src/data/guests.ts"),
     "utf8",
   );
-  const names = extractGuestFullNames(guestSource);
+  const e2eGuestSource = readFileSync(
+    join(rootDirectory, "src/data/e2e-guests.ts"),
+    "utf8",
+  );
+  const names = [
+    ...extractGuestFullNames(guestSource),
+    ...extractE2eGuestFullNames(e2eGuestSource),
+  ];
 
-  if (names.length !== 20) {
-    throw new Error(`Expected 20 guest names, found ${names.length}.`);
+  if (names.length !== 40) {
+    throw new Error(`Expected 40 guest names, found ${names.length}.`);
   }
 
   const bundleContents = readJavaScriptFiles(

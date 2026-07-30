@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { findGuestById } from "@/data/guests";
+import { E2E_GUESTS } from "@/data/e2e-guests";
 import { GUEST_FIXTURES } from "@/test/fixtures";
 import { getPublicGuests } from "./guests-public";
 
@@ -28,6 +29,21 @@ describe("public guests", () => {
 
     for (const fixture of GUEST_FIXTURES) {
       expect(serializedGuests.includes(fixture.fullName)).toBe(false);
+    }
+  });
+
+  it("projects the deterministic E2E directory only in explicit memory mode", () => {
+    const guests = getPublicGuests({
+      NODE_ENV: "test",
+      E2E_REPOSITORY: "memory",
+    });
+    const serializedGuests = JSON.stringify(guests);
+
+    expect(guests[0]?.maskedName).toBe("E2E G**** 0*");
+    expect(guests[1]?.maskedName).toBe("E2E G**** 0*");
+
+    for (const guest of E2E_GUESTS) {
+      expect(serializedGuests).not.toContain(guest.fullName);
     }
   });
 

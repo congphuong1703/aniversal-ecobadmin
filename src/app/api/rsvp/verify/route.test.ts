@@ -2,12 +2,12 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { findGuestById } from "@/data/guests";
+import { findGuestInActiveDirectory } from "@/lib/guest-directory";
 import { signVerificationToken } from "@/lib/verification-token";
 import { POST } from "./route";
 
-vi.mock("@/data/guests", () => ({
-  findGuestById: vi.fn(),
+vi.mock("@/lib/guest-directory", () => ({
+  findGuestInActiveDirectory: vi.fn(),
 }));
 
 vi.mock("@/lib/verification-token", () => ({
@@ -16,7 +16,7 @@ vi.mock("@/lib/verification-token", () => ({
 
 const GUEST = {
   id: "guest-01",
-  fullName: "Nguyễn Văn An",
+  fullName: "E2E Guest 01",
   imagePath: "/guests/guest-01.svg",
 };
 
@@ -31,13 +31,13 @@ function request(body: unknown) {
 describe("POST /api/rsvp/verify", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(findGuestById).mockReturnValue(GUEST);
+    vi.mocked(findGuestInActiveDirectory).mockReturnValue(GUEST);
     vi.mocked(signVerificationToken).mockResolvedValue("signed-token");
   });
 
   it("accepts a normalized matching name and returns a public guest", async () => {
     const response = await POST(
-      request({ guestId: GUEST.id, name: "  NGUYỄN   VĂN AN  " }),
+      request({ guestId: GUEST.id, name: "  e2e   GUEST 01  " }),
     );
     const body = await response.json();
 
@@ -46,7 +46,7 @@ describe("POST /api/rsvp/verify", () => {
       verificationToken: "signed-token",
       guest: {
         id: GUEST.id,
-        maskedName: "Nguyễn V** A*",
+        maskedName: "E2E G**** 0*",
         imagePath: GUEST.imagePath,
       },
     });
@@ -59,7 +59,7 @@ describe("POST /api/rsvp/verify", () => {
       request({ guestId: GUEST.id, name: "Someone Else" }),
     );
 
-    vi.mocked(findGuestById).mockReturnValue(undefined);
+    vi.mocked(findGuestInActiveDirectory).mockReturnValue(undefined);
     const unknownGuest = await POST(
       request({ guestId: "guest-99", name: "Someone Else" }),
     );

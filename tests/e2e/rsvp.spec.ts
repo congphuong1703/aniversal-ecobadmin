@@ -6,6 +6,8 @@ import {
 } from "@playwright/test";
 
 const MAP_URL = "https://maps.app.goo.gl/RuNCYdPkAf9K5uS58";
+const E2E_FIRST_GUEST_NAME = "E2E Guest 01";
+const E2E_SECOND_GUEST_NAME = "E2E Guest 02";
 
 function workerScope(projectName: string, workerIndex: number) {
   return `pw-${projectName}-${workerIndex}`;
@@ -65,7 +67,7 @@ async function verifyFirstGuest(page: Page) {
   await page.getByRole("button", { name: /Tiếp tục/ }).click();
   await expect(page.getByLabel("Họ và tên đầy đủ")).toBeFocused();
   await expectNoHorizontalOverflow(page);
-  await page.getByLabel("Họ và tên đầy đủ").fill("Nguyễn Văn An");
+  await page.getByLabel("Họ và tên đầy đủ").fill(E2E_FIRST_GUEST_NAME);
   await page.getByRole("button", { name: /Xác minh/ }).click();
   await expect(
     page.getByRole("heading", { name: "Bạn sẽ tham dự chứ?" }),
@@ -242,7 +244,7 @@ test("supports keyboard radio selection, visible focus, validation focus, and re
   const nameInput = page.getByLabel("Họ và tên đầy đủ");
   await page.getByRole("button", { name: /Xác minh/ }).click();
   await expect(nameInput).toBeFocused();
-  await nameInput.fill("Trần Minh Châu");
+  await nameInput.fill(E2E_SECOND_GUEST_NAME);
   await page.getByRole("button", { name: /Xác minh/ }).click();
 
   await page.getByRole("button", { name: "Gửi phản hồi" }).click();
