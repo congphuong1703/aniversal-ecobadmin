@@ -516,7 +516,7 @@ Cover mobile and desktop RSVP success, declined RSVP without a message, incorrec
 
 - [ ] **Step 2: Add safe E2E data isolation**
 
-Add `E2E_REPOSITORY=memory` support guarded by `NODE_ENV !== "production"`. Seed deterministic submissions per Playwright worker and reset them through an internal test-only endpoint compiled only when E2E mode is enabled.
+Add `E2E_REPOSITORY=memory` support guarded by `NODE_ENV !== "production"`. Seed deterministic submissions per Playwright worker and reset them through internal test-only endpoints that remain in the route manifest but always return `404` unless both non-production mode and explicit E2E memory mode are active. This runtime-disabled production design is the approved trade-off; no custom E2E server is required.
 
 - [ ] **Step 3: Document the production setup**
 
