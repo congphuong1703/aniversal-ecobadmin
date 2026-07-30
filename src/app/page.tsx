@@ -25,8 +25,8 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <EventDetails />
       <Anniversary />
+      <EventDetails />
       <RsvpExperience />
       <footer className="site-footer">
         <div className="section-shell">
