@@ -44,14 +44,16 @@ export function checkBuiltClientPrivacy(rootDirectory = process.cwd()) {
     join(rootDirectory, "src/data/e2e-guests.ts"),
     "utf8",
   );
-  const names = [
-    ...extractGuestFullNames(guestSource),
-    ...extractE2eGuestFullNames(e2eGuestSource),
-  ];
+  const guestNames = extractGuestFullNames(guestSource);
+  const e2eGuestNames = extractE2eGuestFullNames(e2eGuestSource);
 
-  if (names.length !== 40) {
-    throw new Error(`Expected 40 guest names, found ${names.length}.`);
+  if (guestNames.length !== e2eGuestNames.length) {
+    throw new Error(
+      `Expected ${guestNames.length} E2E guest names to match GUESTS, found ${e2eGuestNames.length}.`,
+    );
   }
+
+  const names = [...guestNames, ...e2eGuestNames];
 
   const bundleContents = readJavaScriptFiles(
     join(rootDirectory, ".next/static"),

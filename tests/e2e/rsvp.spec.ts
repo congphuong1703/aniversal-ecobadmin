@@ -42,7 +42,7 @@ async function expectGuestCardsToRemainFourByFive(page: Page) {
     }),
   );
 
-  expect(ratios).toHaveLength(20);
+  expect(ratios).toHaveLength(25);
 
   for (const ratio of ratios) {
     expect(ratio).toBeCloseTo(4 / 5, 2);

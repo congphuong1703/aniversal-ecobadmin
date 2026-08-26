@@ -7,107 +7,132 @@ export type GuestRecord = {
   imagePosition?: string;
 };
 
-// Development-only samples. Replace names and portraits in place; IDs and filenames stay stable.
+// IDs and filenames stay stable; only fullName should change when guests change.
 export const GUESTS: readonly GuestRecord[] = [
   {
     id: "guest-01",
-    fullName: "Nguyễn Văn An",
+    fullName: "Mads Werner",
     imagePath: "/guests/guest-01.svg",
   },
   {
     id: "guest-02",
-    fullName: "Trần Minh Châu",
+    fullName: "Đào Mai Hoa",
     imagePath: "/guests/guest-02.svg",
   },
   {
     id: "guest-03",
-    fullName: "Lê Hoàng Dũng",
+    fullName: "Nguyễn Xuân Quang",
     imagePath: "/guests/guest-03.svg",
   },
   {
     id: "guest-04",
-    fullName: "Phạm Thu Hà",
+    fullName: "Vũ Thị Hà",
     imagePath: "/guests/guest-04.svg",
   },
   {
     id: "guest-05",
-    fullName: "Hoàng Gia Huy",
+    fullName: "Nguyễn Duy Kiên",
     imagePath: "/guests/guest-05.svg",
   },
   {
     id: "guest-06",
-    fullName: "Phan Ngọc Lan",
+    fullName: "Nguyễn Thu Hằng",
     imagePath: "/guests/guest-06.svg",
   },
   {
     id: "guest-07",
-    fullName: "Vũ Đức Long",
+    fullName: "Trần Quang Thành",
     imagePath: "/guests/guest-07.svg",
   },
   {
     id: "guest-08",
-    fullName: "Võ Thanh Mai",
+    fullName: "Vũ Minh Đức",
     imagePath: "/guests/guest-08.svg",
   },
   {
     id: "guest-09",
-    fullName: "Đặng Quốc Nam",
+    fullName: "Nguyễn Thị Châm",
     imagePath: "/guests/guest-09.svg",
   },
   {
     id: "guest-10",
-    fullName: "Bùi Kim Ngân",
+    fullName: "Nguyễn Ánh Vân",
     imagePath: "/guests/guest-10.svg",
   },
   {
     id: "guest-11",
-    fullName: "Đỗ Anh Phương",
+    fullName: "Đặng Ngọc Duy",
     imagePath: "/guests/guest-11.svg",
   },
   {
     id: "guest-12",
-    fullName: "Hồ Minh Quân",
+    fullName: "Đặng Văn Hưng",
     imagePath: "/guests/guest-12.svg",
   },
   {
     id: "guest-13",
-    fullName: "Ngô Thảo Trang",
+    fullName: "Đinh Dương Sơn",
     imagePath: "/guests/guest-13.svg",
   },
   {
     id: "guest-14",
-    fullName: "Dương Tuấn Việt",
+    fullName: "Lê Nhật Dương",
     imagePath: "/guests/guest-14.svg",
   },
   {
     id: "guest-15",
-    fullName: "Lý Khánh Vy",
+    fullName: "Ngô Minh Đức",
     imagePath: "/guests/guest-15.svg",
   },
   {
     id: "guest-16",
-    fullName: "Nguyễn Bảo Anh",
+    fullName: "Nguyễn Công Phương",
     imagePath: "/guests/guest-16.svg",
   },
   {
     id: "guest-17",
-    fullName: "Trần Hải Đăng",
+    fullName: "Trần Thị Hồng Hà",
     imagePath: "/guests/guest-17.svg",
   },
   {
     id: "guest-18",
-    fullName: "Lê Quỳnh Hương",
+    fullName: "Nguyễn Thị Lan Hương",
     imagePath: "/guests/guest-18.svg",
   },
   {
     id: "guest-19",
-    fullName: "Phạm Nhật Linh",
+    fullName: "Trần Việt Hoàng",
     imagePath: "/guests/guest-19.svg",
   },
   {
     id: "guest-20",
-    fullName: "Vũ Tiến Thành",
+    fullName: "Vũ Thị Lan Anh",
     imagePath: "/guests/guest-20.svg",
+  },
+  {
+    id: "guest-21",
+    fullName: "Ngô Thục An",
+    imagePath: "/guests/guest-21.svg",
+  },
+  {
+    id: "guest-22",
+    fullName: "Nguyễn Thùy Linh",
+    imagePath: "/guests/guest-22.svg",
+  },
+  {
+    id: "guest-23",
+    fullName: "Nguyễn Quang Tâm",
+    imagePath: "/guests/guest-23.svg",
+  },
+  {
+    id: "guest-24",
+    fullName: "Đoàn Thị Chi",
+    imagePath: "/guests/guest-24.svg",
+  },
+  {
+    id: "guest-25",
+    fullName: "Kim Ngân",
+    imagePath: "/guests/guest-25.svg",
   },
 ];
 
