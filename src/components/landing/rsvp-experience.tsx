@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { EVENT } from "@/data/event";
 import type { PublicGuest } from "@/lib/guests-public";
 import { FormError } from "@/components/ui/form-error";
+import { Modal } from "@/components/ui/modal";
 
 type ExperienceStep =
   | "selecting"
@@ -83,7 +84,6 @@ export function RsvpExperience() {
   const [status, setStatus] = useState("Đang tải danh sách khách mời…");
 
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const firstGuestInputRef = useRef<HTMLInputElement>(null);
   const attendingInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -149,18 +149,21 @@ export function RsvpExperience() {
     };
   }, []);
 
-  function continueToVerification() {
-    if (!selectedGuest) {
-      setError("Vui lòng chọn ảnh của bạn.");
-      setStatus("Chưa chọn khách mời.");
-      firstGuestInputRef.current?.focus();
-      return;
-    }
-
+  function selectGuest(guest: PublicGuest) {
+    setSelectedGuestId(guest.id);
     setError("");
     setStep("verifying");
-    setStatus(`Đã chọn ${selectedGuest.maskedName}. Hãy xác minh họ tên.`);
+    setStatus(`Đã chọn ${guest.maskedName}. Hãy xác minh họ tên.`);
     window.requestAnimationFrame(() => nameInputRef.current?.focus());
+  }
+
+  function handleSelectGuestClick(event: React.MouseEvent<HTMLButtonElement>) {
+    const guest = guests.find(
+      (candidate) => candidate.id === event.currentTarget.dataset.guestId,
+    );
+    if (guest) {
+      selectGuest(guest);
+    }
   }
 
   async function verifyGuest(event?: FormEvent<HTMLFormElement>) {
@@ -185,11 +188,11 @@ export function RsvpExperience() {
       if (!response.ok) {
         const apiError = await readError(
           response,
-          "Thông tin chưa khớp với ảnh đã chọn.",
+          "Thông tin chưa khớp với tên đã chọn.",
         );
         setError(
           response.status === 400
-            ? "Thông tin chưa khớp với ảnh đã chọn."
+            ? "Thông tin chưa khớp với tên đã chọn."
             : apiError,
         );
         setStatus("Xác minh chưa thành công.");
@@ -312,14 +315,14 @@ export function RsvpExperience() {
     setResumeSubmissionAfterVerification(false);
     setError("");
     setStep("selecting");
-    setStatus("Hãy chọn ảnh của bạn.");
+    setStatus("Hãy chọn tên của bạn.");
   }
 
   function renderSelecting() {
     if (isLoadingGuests) {
       return (
         <div className="rsvp-loading" aria-hidden="true">
-          {Array.from({ length: 10 }, (_, index) => (
+          {Array.from({ length: 8 }, (_, index) => (
             <span key={index} />
           ))}
         </div>
@@ -330,7 +333,7 @@ export function RsvpExperience() {
       return (
         <div className="rsvp-panel rsvp-panel-centered">
           <span className="rsvp-kicker">Danh sách khách mời</span>
-          <h3 className="font-display">Chưa thể mở album.</h3>
+          <h3 className="font-display">Chưa thể mở danh sách.</h3>
           <FormError>{error}</FormError>
           <button className="button-primary" type="button" onClick={loadGuests}>
             Thử tải lại
@@ -340,66 +343,34 @@ export function RsvpExperience() {
     }
 
     return (
-      <form
-        className="rsvp-selection"
-        onSubmit={(event) => {
-          event.preventDefault();
-          continueToVerification();
-        }}
-      >
-        <fieldset
-          aria-describedby={error ? "guest-selection-error" : undefined}
-          aria-invalid={error ? "true" : undefined}
-        >
-          <legend className="sr-only">
-            Chọn ảnh của bạn trong danh sách khách mời
-          </legend>
-          <div className="guest-grid">
-            {guests.map((guest, index) => (
-              <label className="guest-card" key={guest.id}>
-                <input
-                  checked={selectedGuestId === guest.id}
-                  name="guest"
-                  onChange={() => {
-                    setSelectedGuestId(guest.id);
-                    setError("");
-                  }}
-                  ref={index === 0 ? firstGuestInputRef : undefined}
-                  type="radio"
-                  value={guest.id}
-                />
-                <Image
-                  alt={`Ảnh khách mời ${guest.maskedName}`}
-                  className="guest-card-image"
-                  height={500}
-                  priority={index < 5}
-                  src={guest.imagePath}
-                  style={{ objectPosition: guest.imagePosition || "50% 50%" }}
-                  width={400}
-                />
-                <span className="guest-card-shade" />
-                <span className="guest-card-index">
+      <div className="rsvp-selection">
+        <p className="rsvp-selection-hint">
+          Chọn tên của bạn trong danh sách khách mời để mở phiếu RSVP.
+        </p>
+        <ul className="guest-name-list" aria-label="Danh sách khách mời">
+          {guests.map((guest, index) => (
+            <li key={guest.id}>
+              <button
+                className="guest-name-item"
+                data-guest-id={guest.id}
+                onClick={handleSelectGuestClick}
+                type="button"
+              >
+                <span className="guest-name-index">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                <span className="guest-card-name">{guest.maskedName}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        {error ? (
-          <FormError id="guest-selection-error">{error}</FormError>
-        ) : null}
-        <div className="rsvp-selection-action">
-          <p>Chỉ tên đã che được hiển thị công khai.</p>
-          <button
-            aria-disabled={!selectedGuestId}
-            className="button-primary"
-            type="submit"
-          >
-            Tiếp tục <span aria-hidden="true">→</span>
-          </button>
-        </div>
-      </form>
+                <span className="guest-name-text">{guest.maskedName}</span>
+                <span aria-hidden="true" className="guest-name-arrow">
+                  →
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="rsvp-selection-note">
+          Chỉ tên đã che được hiển thị công khai.
+        </p>
+      </div>
     );
   }
 
@@ -459,7 +430,7 @@ export function RsvpExperience() {
               type="button"
               onClick={chooseAnotherGuest}
             >
-              Chọn lại ảnh
+              Chọn lại tên
             </button>
             {failed ? (
               <button
@@ -678,7 +649,7 @@ export function RsvpExperience() {
             </h2>
           </div>
           <p>
-            Chọn ảnh của bạn, xác minh họ tên và để lại phản hồi trước buổi hẹn.
+            Chọn tên của bạn, xác minh họ tên và để lại phản hồi trước buổi hẹn.
           </p>
         </div>
         <p className="sr-only" aria-live="polite">
@@ -686,13 +657,24 @@ export function RsvpExperience() {
         </p>
         <div className="reveal reveal-delay">
           {visibleStep === "selecting" ? renderSelecting() : null}
+        </div>
+      </div>
+      {visibleStep !== "selecting" ? (
+        <Modal
+          label={
+            selectedGuest
+              ? `RSVP · ${selectedGuest.maskedName}`
+              : "RSVP · Xác minh khách mời"
+          }
+          onClose={chooseAnotherGuest}
+        >
           {visibleStep === "verifying" ? renderVerification() : null}
           {visibleStep === "responding" || visibleStep === "submitting"
             ? renderResponse()
             : null}
           {visibleStep === "success" ? renderSuccess() : null}
-        </div>
-      </div>
+        </Modal>
+      ) : null}
     </section>
   );
 }

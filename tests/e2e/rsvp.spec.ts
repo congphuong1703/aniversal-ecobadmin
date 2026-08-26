@@ -34,37 +34,16 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBe(true);
 }
 
-async function expectGuestCardsToRemainFourByFive(page: Page) {
-  const ratios = await page.locator(".guest-card").evaluateAll((cards) =>
-    cards.map((card) => {
-      const box = card.getBoundingClientRect();
-      return box.width / box.height;
-    }),
-  );
-
-  expect(ratios).toHaveLength(25);
-
-  for (const ratio of ratios) {
-    expect(ratio).toBeCloseTo(4 / 5, 2);
-  }
-}
-
 async function openRsvp(page: Page) {
   await page.goto("/#rsvp");
-  await expect(
-    page.getByRole("radio", { name: /Ảnh khách mời/ }).first(),
-  ).toBeVisible();
+  await expect(page.locator(".guest-name-item").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  await expectGuestCardsToRemainFourByFive(page);
 }
 
 async function verifyFirstGuest(page: Page) {
   await openRsvp(page);
-  await page
-    .getByRole("radio", { name: /Ảnh khách mời/ })
-    .first()
-    .check();
-  await page.getByRole("button", { name: /Tiếp tục/ }).click();
+  await page.locator(".guest-name-item").first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByLabel("Họ và tên đầy đủ")).toBeFocused();
   await expectNoHorizontalOverflow(page);
   await page.getByLabel("Họ và tên đầy đủ").fill(E2E_FIRST_GUEST_NAME);
@@ -163,17 +142,14 @@ test("rejects the wrong name and returns focus to the verification field", async
   page,
 }) => {
   await openRsvp(page);
-  await page
-    .getByRole("radio", { name: /Ảnh khách mời/ })
-    .first()
-    .check();
-  await page.getByRole("button", { name: /Tiếp tục/ }).click();
+  await page.locator(".guest-name-item").first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
   const nameInput = page.getByLabel("Họ và tên đầy đủ");
   await nameInput.fill("Tên Không Khớp");
   await page.getByRole("button", { name: /Xác minh/ }).click();
 
   await expect(
-    page.getByText("Thông tin chưa khớp với ảnh đã chọn."),
+    page.getByText("Thông tin chưa khớp với tên đã chọn."),
   ).toBeVisible();
   await expect(nameInput).toBeFocused();
   await expectNoHorizontalOverflow(page);
@@ -227,22 +203,17 @@ test("re-verifies from Back and resumes a lost response with the same submission
   expect(state.submissions[0]?.clientSubmissionId).toBe(originalSubmissionId);
 });
 
-test("supports keyboard radio selection, visible focus, validation focus, and reduced motion", async ({
+test("supports keyboard name selection, visible focus, validation focus, and reduced motion", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openRsvp(page);
-  const guestRadios = page.getByRole("radio", { name: /Ảnh khách mời/ });
-  await guestRadios.first().focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(guestRadios.nth(1)).toBeChecked();
-  await expect(guestRadios.nth(1)).toBeFocused();
+  const guestButtons = page.locator(".guest-name-item");
+  await guestButtons.nth(1).focus();
   expect(
-    await guestRadios
+    await guestButtons
       .nth(1)
-      .evaluate(
-        (radio) => getComputedStyle(radio.closest("label")!).outlineStyle,
-      ),
+      .evaluate((button) => getComputedStyle(button).outlineStyle),
   ).not.toBe("none");
   expect(
     await page
@@ -251,8 +222,10 @@ test("supports keyboard radio selection, visible focus, validation focus, and re
       .evaluate((element) => getComputedStyle(element).animationName),
   ).toBe("none");
 
-  await page.getByRole("button", { name: /Tiếp tục/ }).click();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toBeVisible();
   const nameInput = page.getByLabel("Họ và tên đầy đủ");
+  await expect(nameInput).toBeFocused();
   await page.getByRole("button", { name: /Xác minh/ }).click();
   await expect(nameInput).toBeFocused();
   await nameInput.fill(E2E_SECOND_GUEST_NAME);

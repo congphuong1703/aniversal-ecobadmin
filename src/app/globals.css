@@ -156,6 +156,25 @@ label {
   letter-spacing: 0.01em;
 }
 
+.hero-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nav-story {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--white);
+  opacity: 0.82;
+  transition: opacity 180ms ease;
+}
+
+.nav-story:hover {
+  opacity: 1;
+}
+
 .nav-rsvp {
   display: inline-flex;
   gap: 1rem;
@@ -364,6 +383,42 @@ button.button-ghost {
 .rsvp-section {
   position: relative;
   padding-block: clamp(90px, 12vw, 170px);
+}
+
+.story-page-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--navy);
+}
+
+.story-page-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100% - 48px, 1380px);
+  height: 90px;
+  margin-inline: auto;
+}
+
+.story-page-header-inner .brand-mark {
+  color: var(--white);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+
+.story-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--white);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  opacity: 0.82;
+  transition: opacity 180ms ease;
+}
+
+.story-page-back:hover {
+  opacity: 1;
 }
 
 .story-layout {
@@ -753,106 +808,76 @@ button.button-ghost {
   font-size: 0.98rem;
 }
 
-.guest-grid,
-.rsvp-loading {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.guest-card {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  cursor: pointer;
-  background: #dce5f7;
-  box-shadow: 0 0 0 1px var(--border);
-  transition: box-shadow 180ms ease, transform 180ms ease;
-}
-
-.guest-card:hover {
-  z-index: 2;
-  transform: translateY(-4px);
-  box-shadow: 0 14px 34px rgb(16 33 63 / 18%);
-}
-
-.guest-card input {
-  position: absolute;
-  z-index: 4;
-  top: 0.85rem;
-  right: 0.85rem;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--lime);
-  cursor: pointer;
-}
-
-.guest-card:has(input:focus-visible) {
-  outline: 3px solid var(--primary);
-  outline-offset: 4px;
-}
-
-.guest-card:has(input:checked) {
-  z-index: 2;
-  box-shadow: 0 0 0 4px var(--lime), 0 0 0 7px var(--primary);
-}
-
-.guest-card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.guest-card:hover .guest-card-image {
-  transform: scale(1.035);
-}
-
-.guest-card-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 48%, rgb(5 20 55 / 82%) 100%);
-}
-
-.guest-card-index {
-  position: absolute;
-  z-index: 2;
-  top: 0.9rem;
-  left: 0.9rem;
-  color: rgb(255 255 255 / 74%);
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.guest-card-name {
-  position: absolute;
-  z-index: 2;
-  right: 0.85rem;
-  bottom: 0.85rem;
-  left: 0.85rem;
-  color: var(--white);
-  font-family: var(--font-display-face), serif;
-  font-size: clamp(1rem, 1.55vw, 1.38rem);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.rsvp-selection-action {
+.rsvp-selection {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.rsvp-selection-action p {
+.rsvp-selection-hint,
+.rsvp-selection-note {
   margin: 0;
   color: var(--navy-muted);
+}
+
+.rsvp-selection-hint {
+  font-size: 0.95rem;
+}
+
+.rsvp-selection-note {
   font-size: 0.75rem;
+}
+
+.guest-name-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guest-name-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  background: var(--ivory-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.guest-name-item:hover {
+  border-color: var(--primary);
+  background: rgb(1 45 204 / 6%);
+  transform: translateY(-2px);
+}
+
+.guest-name-index {
+  color: var(--primary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.guest-name-text {
+  flex: 1;
+  font-family: var(--font-display-face), serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.guest-name-arrow {
+  color: var(--navy-muted);
+  transition: transform 180ms ease, color 180ms ease;
+}
+
+.guest-name-item:hover .guest-name-arrow {
+  color: var(--primary);
+  transform: translateX(3px);
 }
 
 .button-primary {
@@ -874,12 +899,61 @@ button.button-ghost {
   color: var(--navy);
 }
 
+.rsvp-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
 .rsvp-loading span {
   display: block;
-  aspect-ratio: 4 / 5;
+  height: 54px;
   background: linear-gradient(110deg, #e8e0d2 30%, #f6f0e5 50%, #e8e0d2 70%);
   background-size: 200% 100%;
   animation: loading-shimmer 1.4s linear infinite;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgb(5 20 55 / 55%);
+  backdrop-filter: blur(6px);
+}
+
+.modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--ivory);
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--navy);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease;
+}
+
+.modal-close:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .rsvp-panel {
@@ -1795,9 +1869,8 @@ button.button-ghost {
     margin-left: auto;
   }
 
-  .guest-grid,
-  .rsvp-loading {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .guest-name-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .admin-summary {
@@ -1959,23 +2032,9 @@ button.button-ghost {
     margin-top: 0;
   }
 
-  .guest-grid,
-  .rsvp-loading {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.7rem;
-  }
-
-  .guest-card-name {
-    font-size: 1rem;
-  }
-
-  .rsvp-selection-action {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .rsvp-selection-action .button-primary {
-    width: 100%;
+  .guest-name-list {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 
   .rsvp-verification {

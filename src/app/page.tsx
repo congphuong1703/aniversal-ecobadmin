@@ -2,14 +2,12 @@ import { Anniversary } from "@/components/landing/anniversary";
 import { EventDetails } from "@/components/landing/event-details";
 import { Hero } from "@/components/landing/hero";
 import { RsvpExperience } from "@/components/landing/rsvp-experience";
-import { Story } from "@/components/landing/story";
 import { EVENT } from "@/data/event";
 
 export default function Home() {
   return (
     <main>
       <Hero />
-      <Story />
       <Anniversary />
       <EventDetails />
       <RsvpExperience />

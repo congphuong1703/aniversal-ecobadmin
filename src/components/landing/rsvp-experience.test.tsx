@@ -51,9 +51,9 @@ function mockGuestLoad() {
 }
 
 async function selectFirstGuest(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole("radio", { name: /Nguyễn V\*\* A\*/i });
-  await user.click(screen.getByRole("radio", { name: /Nguyễn V\*\* A\*/i }));
-  await user.click(screen.getByRole("button", { name: /tiếp tục/i }));
+  await user.click(
+    await screen.findByRole("button", { name: /Nguyễn V\*\* A\*/i }),
+  );
 }
 
 async function verifyFirstGuest(user: ReturnType<typeof userEvent.setup>) {
@@ -82,40 +82,20 @@ describe("RsvpExperience", () => {
     vi.unstubAllGlobals();
   });
 
-  it("keeps empty gallery validation reachable and focuses the first guest", async () => {
+  it("lists guest names and opens a modal immediately on selection", async () => {
     mockGuestLoad();
     const user = userEvent.setup();
 
     render(<RsvpExperience />);
 
-    expect(await screen.findAllByRole("radio")).toHaveLength(GUESTS.length);
-    const continueButton = screen.getByRole("button", { name: /tiếp tục/i });
-    const guestGroup = screen.getByRole("group", {
-      name: /chọn ảnh của bạn trong danh sách khách mời/i,
-    });
-    const firstGuest = screen.getByRole("radio", {
-      name: /Nguyễn V\*\* A\*/i,
-    });
+    expect(
+      await screen.findAllByRole("button", { name: /Nguyễn V\*\* A\*|Trần M\*\*\* C\*\*\*/i }),
+    ).toHaveLength(GUESTS.length);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    expect(continueButton).toBeEnabled();
-    expect(continueButton).toHaveAttribute("aria-disabled", "true");
+    await selectFirstGuest(user);
 
-    await user.click(continueButton);
-
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent(/chọn ảnh của bạn/i);
-    expect(guestGroup).toHaveAttribute("aria-describedby", alert.id);
-    expect(guestGroup).toHaveAttribute("aria-invalid", "true");
-    expect(firstGuest).toHaveFocus();
-
-    await user.click(
-      screen.getByRole("radio", { name: /Trần M\*\*\* C\*\*\*/i }),
-    );
-
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(guestGroup).not.toHaveAttribute("aria-describedby");
-    expect(guestGroup).not.toHaveAttribute("aria-invalid");
-    expect(continueButton).toHaveAttribute("aria-disabled", "false");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("shows the selected portrait and masked name during verification", async () => {
