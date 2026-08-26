@@ -345,7 +345,7 @@ export function RsvpExperience() {
     return (
       <div className="rsvp-selection">
         <p className="rsvp-selection-hint">
-          Chọn tên của bạn trong danh sách khách mời để mở phiếu RSVP.
+          Chọn tên của bạn trong danh sách khách mời để mở phiếu mời.
         </p>
         <ul className="guest-name-list" aria-label="Danh sách khách mời">
           {guests.map((guest, index) => (
@@ -356,10 +356,21 @@ export function RsvpExperience() {
                 onClick={handleSelectGuestClick}
                 type="button"
               >
-                <span className="guest-name-index">
-                  {String(index + 1).padStart(2, "0")}
+                <span className="guest-name-avatar">
+                  <Image
+                    alt=""
+                    fill
+                    sizes="44px"
+                    src={guest.imagePath}
+                    style={{ objectPosition: guest.imagePosition || "50% 50%" }}
+                  />
                 </span>
-                <span className="guest-name-text">{guest.maskedName}</span>
+                <span className="guest-name-main">
+                  <span className="guest-name-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="guest-name-text">{guest.maskedName}</span>
+                </span>
                 <span aria-hidden="true" className="guest-name-arrow">
                   →
                 </span>
@@ -398,7 +409,7 @@ export function RsvpExperience() {
         </div>
         <form className="rsvp-form" onSubmit={verifyGuest}>
           <div>
-            <span className="rsvp-kicker">Bước 02 · Xác minh</span>
+            <span className="rsvp-kicker">Bước 02 · Xác nhận</span>
             <h3 className="font-display">Đúng người, đúng cuộc hẹn.</h3>
             <p>
               Nhập họ tên đầy đủ có dấu để chúng mình xác nhận riêng với danh
@@ -643,7 +654,7 @@ export function RsvpExperience() {
       <div className="section-shell">
         <div className="section-heading reveal">
           <div>
-            <span className="eyebrow">RSVP · Khách mời</span>
+            <span className="eyebrow">Khách mời</span>
             <h2 className="font-display" id="rsvp-title">
               Tấm thiệp mời trên bàn.
             </h2>
@@ -663,8 +674,8 @@ export function RsvpExperience() {
         <Modal
           label={
             selectedGuest
-              ? `RSVP · ${selectedGuest.maskedName}`
-              : "RSVP · Xác minh khách mời"
+              ? `Phiếu mời · ${selectedGuest.maskedName}`
+              : "Xác minh khách mời"
           }
           onClose={chooseAnotherGuest}
         >

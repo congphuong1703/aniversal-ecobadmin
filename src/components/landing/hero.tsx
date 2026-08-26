@@ -10,7 +10,7 @@ export function Hero() {
         </a>
         <div className="hero-nav-links">
           <a className="nav-story" href="/story">Câu chuyện</a>
-          <a className="nav-rsvp" href="#rsvp">RSVP <span aria-hidden="true">↘</span></a>
+          <a className="nav-rsvp" href="#rsvp">Tham dự <span aria-hidden="true">↘</span></a>
         </div>
       </nav>
       <div className="hero-orbit hero-orbit-one" aria-hidden="true" />

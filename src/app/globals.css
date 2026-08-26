@@ -856,6 +856,28 @@ button.button-ghost {
   transform: translateY(-2px);
 }
 
+.guest-name-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ivory);
+}
+
+.guest-name-avatar img {
+  object-fit: cover;
+}
+
+.guest-name-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .guest-name-index {
   color: var(--primary);
   font-size: 0.65rem;
@@ -864,10 +886,12 @@ button.button-ghost {
 }
 
 .guest-name-text {
-  flex: 1;
+  overflow: hidden;
   font-family: var(--font-display-face), serif;
   font-size: 1.05rem;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .guest-name-arrow {
