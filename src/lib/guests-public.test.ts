@@ -9,13 +9,13 @@ import { GUEST_FIXTURES } from "@/test/fixtures";
 import { getPublicGuests } from "./guests-public";
 
 describe("public guests", () => {
-  it("returns exactly 20 stable public guest projections", () => {
+  it("returns exactly 25 stable public guest projections", () => {
     const guests = getPublicGuests();
 
-    expect(guests).toHaveLength(20);
+    expect(guests).toHaveLength(25);
     expect(guests.map(({ id }) => id)).toEqual(
       Array.from(
-        { length: 20 },
+        { length: 25 },
         (_, index) => `guest-${String(index + 1).padStart(2, "0")}`,
       ),
     );

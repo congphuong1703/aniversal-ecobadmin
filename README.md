@@ -17,9 +17,9 @@ npm ci
 
 ## Replace the sample guest data
 
-The repository contains 20 development-only names and placeholder portraits. Replace them before deployment.
+The repository contains 25 development-only names and placeholder portraits. Replace them before deployment.
 
-1. Replace the sample names in `src/data/guests.ts` without changing the stable IDs `guest-01` through `guest-20`.
+1. Replace the sample names in `src/data/guests.ts` without changing the stable IDs `guest-01` through `guest-25`. `src/data/e2e-guests.ts` must have one `E2E Guest NN` entry per `GUESTS` entry — the `npm run build` privacy check enforces this parity.
 2. Replace each placeholder below in place with the approved real portrait, exported at a `4:5` aspect ratio. Keep the filename and its matching `imagePath` stable.
 
 ```text
@@ -43,6 +43,11 @@ public/guests/guest-17.svg
 public/guests/guest-18.svg
 public/guests/guest-19.svg
 public/guests/guest-20.svg
+public/guests/guest-21.svg
+public/guests/guest-22.svg
+public/guests/guest-23.svg
+public/guests/guest-24.svg
+public/guests/guest-25.svg
 ```
 
 Full names stay server-only. `GET /api/guests` and the public page expose only stable IDs, masked names, and portrait presentation data.
@@ -118,7 +123,7 @@ npm run build
 
 Playwright starts its own isolated server on port `3108`, uses only the in-memory repository and rate limiter, and covers Chromium at `1440x1000` plus a Chromium mobile viewport at `390x844`. It checks horizontal overflow, `4:5` guest cards, keyboard/focus behavior, reduced motion, RSVP retry deduplication through re-verification, intentional history, the approved Maps link, and the admin flow.
 
-The production build finishes by scanning every JavaScript file in `.next/static` for all 20 configured full guest names. The build fails if any full name enters a client bundle.
+The production build finishes by scanning every JavaScript file in `.next/static` for all 25 configured full guest names. The build fails if any full name enters a client bundle.
 
 These assertions validate responsive behavior but are not screenshot-diff tests; font rasterization and subtle platform-specific spacing still require a final visual review in the target browser.
 
@@ -130,8 +135,8 @@ npx playwright install chromium
 
 ## Deploy to Vercel
 
-1. Replace `public/guests/guest-01.svg` through `public/guests/guest-20.svg` with the real `4:5` images in place.
-2. Replace the 20 sample names in `src/data/guests.ts` without changing stable IDs.
+1. Replace `public/guests/guest-01.svg` through `public/guests/guest-25.svg` with the real `4:5` images in place.
+2. Replace the 25 sample names in `src/data/guests.ts` without changing stable IDs.
 3. Run the SQL migration in Supabase.
 4. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, and `RSVP_VERIFICATION_SECRET` in Vercel for Production.
 5. Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`, and `npm run build`.

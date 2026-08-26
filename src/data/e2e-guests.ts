@@ -23,6 +23,11 @@ export const E2E_GUEST_FULL_NAMES = [
   "E2E Guest 18",
   "E2E Guest 19",
   "E2E Guest 20",
+  "E2E Guest 21",
+  "E2E Guest 22",
+  "E2E Guest 23",
+  "E2E Guest 24",
+  "E2E Guest 25",
 ] as const;
 
 export const E2E_GUESTS: readonly GuestRecord[] = E2E_GUEST_FULL_NAMES.map(

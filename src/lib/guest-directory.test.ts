@@ -28,7 +28,7 @@ describe("server guest directory selection", () => {
   });
 
   it("keeps stable IDs and assets while isolating names from replaceable production data", () => {
-    expect(E2E_GUESTS).toHaveLength(20);
+    expect(E2E_GUESTS).toHaveLength(25);
     expect(E2E_GUESTS.map(({ id }) => id)).toEqual(
       GUESTS.map(({ id }) => id),
     );

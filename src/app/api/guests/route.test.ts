@@ -12,7 +12,7 @@ describe("GET /api/guests", () => {
     const serialized = JSON.stringify(body);
 
     expect(response.status).toBe(200);
-    expect(body.guests).toHaveLength(20);
+    expect(body.guests).toHaveLength(25);
     expect(serialized).not.toContain("fullName");
 
     for (const guest of GUEST_FIXTURES) {
