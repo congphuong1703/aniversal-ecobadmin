@@ -2,14 +2,16 @@ import { Anniversary } from "@/components/landing/anniversary";
 import { EventDetails } from "@/components/landing/event-details";
 import { Hero } from "@/components/landing/hero";
 import { RsvpExperience } from "@/components/landing/rsvp-experience";
+import { StoryTeaser } from "@/components/landing/story-teaser";
 import { EVENT } from "@/data/event";
 
 export default function Home() {
   return (
     <main>
       <Hero />
-      <Anniversary />
+      <StoryTeaser />
       <EventDetails />
+      <Anniversary />
       <RsvpExperience />
       <footer className="site-footer">
         <div className="section-shell">
@@ -17,8 +19,12 @@ export default function Home() {
             <span>Eco</span>
             <strong>Badminton</strong>
           </div>
-          <p>Kỷ niệm một năm · {EVENT.time} · {EVENT.date}</p>
-          <a href="#top">Về đầu trang <span aria-hidden="true">↑</span></a>
+          <p>
+            Kỷ niệm một năm · {EVENT.time} · {EVENT.date}
+          </p>
+          <a href="#top">
+            Về đầu trang <span aria-hidden="true">↑</span>
+          </a>
         </div>
       </footer>
     </main>

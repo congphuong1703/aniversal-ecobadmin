@@ -9,13 +9,20 @@ const DETAILS = [
 
 export function EventDetails() {
   return (
-    <section className="event-section" id="details" aria-labelledby="event-title">
+    <section
+      className="event-section"
+      id="details"
+      aria-labelledby="event-title"
+    >
       <div className="section-shell event-layout">
         <div className="event-title reveal">
           <span className="eyebrow">Cuộc hẹn</span>
-          <h2 className="font-display" id="event-title">Đến vì đội. Ở lại vì chuyện vui.</h2>
+          <h2 className="font-display" id="event-title">
+            Tự do trong thế giới của ta.
+          </h2>
           <p>
-            Một buổi tối không CẦU kỳ, không CHẠY deadline — chỉ cần đúng người, đúng bàn và đúng thời điểm.
+            Một buổi tối không CẦU kỳ, không CHẠY deadline — chỉ cần đúng người,
+            đúng bàn và đúng thời điểm.
           </p>
         </div>
         <div className="event-card reveal reveal-delay">

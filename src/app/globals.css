@@ -378,6 +378,7 @@ button.button-ghost {
 }
 
 .story-section,
+.story-teaser-section,
 .event-section,
 .anniversary-section,
 .rsvp-section {
@@ -476,6 +477,10 @@ button.button-ghost {
 
 .story-copy {
   max-width: 850px;
+}
+
+.story-copy .button-primary {
+  margin-top: 2.5rem;
 }
 
 .story-copy h2,

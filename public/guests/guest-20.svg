@@ -5,5 +5,5 @@
   <path d="M95 900c47-240 185-360 305-360s258 120 305 360" fill="#74552b"/>
   <circle cx="400" cy="355" r="168" fill="#c88962"/>
   <path d="M228 342c8-147 84-227 186-227 108 0 170 82 174 218-49-45-109-68-178-68-71 0-132 26-182 77z" fill="#2b241d"/>
-  <text x="70" y="100" fill="#74552b" font-family="sans-serif" font-size="52" font-weight="700">20</text>
+  <text x="110" y="100" fill="#74552b" font-family="sans-serif" font-size="52" font-weight="700">20</text>
 </svg>
