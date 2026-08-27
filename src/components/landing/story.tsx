@@ -3,6 +3,8 @@ import Image from "next/image";
 type StoryImage = {
   src: string;
   alt: string;
+  width: number;
+  height: number;
 };
 
 type StoryGroup = {
@@ -21,6 +23,8 @@ const GROUPS: StoryGroup[] = [
       {
         src: "/images/happy_go_to_badminton.png",
         alt: "Cả nhóm vui vẻ lên đường đi đánh cầu lông",
+        width: 1024,
+        height: 1536,
       },
     ],
   },
@@ -32,10 +36,14 @@ const GROUPS: StoryGroup[] = [
       {
         src: "/images/chuan_bi.png",
         alt: "Chuẩn bị sân bãi trước giờ thi đấu",
+        width: 1920,
+        height: 2560,
       },
       {
         src: "/images/chuan_bi_2.png",
         alt: "Chuẩn bị dụng cụ, banner sự kiện",
+        width: 2568,
+        height: 1926,
       },
     ],
   },
@@ -47,10 +55,14 @@ const GROUPS: StoryGroup[] = [
       {
         src: "/images/huong_dan_1.png",
         alt: "Hướng dẫn thành viên mới cầm vợt",
+        width: 453,
+        height: 1166,
       },
       {
         src: "/images/huong_dan_2.png",
         alt: "Hướng dẫn luật chơi cho tân binh",
+        width: 1099,
+        height: 1334,
       },
     ],
   },
@@ -63,6 +75,8 @@ const GROUPS: StoryGroup[] = [
       {
         src: "/images/doi_hinh.png",
         alt: "Đội hình các thành viên ra sân thi đấu",
+        width: 2560,
+        height: 1440,
       },
     ],
   },
@@ -71,8 +85,18 @@ const GROUPS: StoryGroup[] = [
     label: "Siu",
     title: "Không biết mô tả làm sao, mời mọi người mô tả.",
     images: [
-      { src: "/images/siu_1.png", alt: "Khoảnh khắc siu trên sân" },
-      { src: "/images/siu_2.png", alt: "Khoảnh khắc siu tiếp theo" },
+      {
+        src: "/images/siu_1.png",
+        alt: "Khoảnh khắc siu trên sân",
+        width: 2568,
+        height: 1926,
+      },
+      {
+        src: "/images/siu_2.png",
+        alt: "Khoảnh khắc siu tiếp theo",
+        width: 2568,
+        height: 1926,
+      },
     ],
   },
   {
@@ -83,9 +107,21 @@ const GROUPS: StoryGroup[] = [
       {
         src: "/images/an_uong_1.png",
         alt: "Cả nhóm ăn uống mừng sinh nhật CLB",
+        width: 2568,
+        height: 1444,
       },
-      { src: "/images/an_uong_2.png", alt: "Nâng ly chúc mừng" },
-      { src: "/images/an_uong_3.png", alt: "Bàn tiệc rôm rả" },
+      {
+        src: "/images/an_uong_2.png",
+        alt: "Nâng ly chúc mừng",
+        width: 2568,
+        height: 1444,
+      },
+      {
+        src: "/images/an_uong_3.png",
+        alt: "Bàn tiệc rôm rả",
+        width: 1280,
+        height: 960,
+      },
     ],
   },
   {
@@ -93,11 +129,36 @@ const GROUPS: StoryGroup[] = [
     label: "Hoá đơn",
     title: "Sau đói là những con số được chia.",
     images: [
-      { src: "/images/hoa_don_1.png", alt: "Hoá đơn chi tiêu 1" },
-      { src: "/images/hoa_don_2.png", alt: "Hoá đơn chi tiêu 2" },
-      { src: "/images/hoa_don_3.png", alt: "Hoá đơn chi tiêu 3" },
-      { src: "/images/hoa_don_4.png", alt: "Hoá đơn chi tiêu 4" },
-      { src: "/images/hoa_don_5.png", alt: "Hoá đơn chi tiêu 5" },
+      {
+        src: "/images/hoa_don_1.png",
+        alt: "Hoá đơn chi tiêu 1",
+        width: 1290,
+        height: 2796,
+      },
+      {
+        src: "/images/hoa_don_2.png",
+        alt: "Hoá đơn chi tiêu 2",
+        width: 1290,
+        height: 2796,
+      },
+      {
+        src: "/images/hoa_don_3.png",
+        alt: "Hoá đơn chi tiêu 3",
+        width: 1290,
+        height: 2796,
+      },
+      {
+        src: "/images/hoa_don_4.png",
+        alt: "Hoá đơn chi tiêu 4",
+        width: 1290,
+        height: 2796,
+      },
+      {
+        src: "/images/hoa_don_5.png",
+        alt: "Hoá đơn chi tiêu 5",
+        width: 1920,
+        height: 2560,
+      },
     ],
   },
   {
@@ -105,10 +166,23 @@ const GROUPS: StoryGroup[] = [
     label: "Sinh nhật",
     title: "Mỗi tháng là 1 dịp đặc biệt. Và tháng 9 này còn đặc biệt hơn nữa.",
     images: [
-      { src: "/images/sinh_nhat.png", alt: "Bánh sinh nhật mừng 1 năm CLB" },
+      {
+        src: "/images/sinh_nhat.png",
+        alt: "Bánh sinh nhật mừng 1 năm CLB",
+        width: 2560,
+        height: 1440,
+      },
     ],
   },
 ];
+
+function getImageSizes(imageCount: number) {
+  if (imageCount === 1) {
+    return "(min-width: 1280px) 1240px, calc(100vw - 40px)";
+  }
+
+  return "(min-width: 760px) 50vw, 100vw";
+}
 
 export function Story() {
   return (
@@ -153,8 +227,10 @@ export function Story() {
                   <Image
                     src={image.src}
                     alt={image.alt}
-                    fill
-                    sizes="(min-width: 760px) 50vw, 100vw"
+                    className="story-photo"
+                    width={image.width}
+                    height={image.height}
+                    sizes={getImageSizes(group.images.length)}
                   />
                 </div>
               ))}

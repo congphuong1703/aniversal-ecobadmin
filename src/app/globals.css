@@ -524,28 +524,29 @@ button.button-ghost {
 
 .photo-grid {
   display: grid;
+  align-items: start;
   gap: 0.6rem;
   margin-bottom: 1.6rem;
 }
 
 .photo-grid-item {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
   background: var(--ivory-soft);
   box-shadow: 0 0 0 1px var(--border);
 }
 
-.photo-grid-item img {
-  object-fit: cover;
+.photo-grid-item .story-photo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(80svh, 900px);
+  object-fit: contain;
 }
 
 .photo-grid-1 {
   grid-template-columns: 1fr;
-}
-
-.photo-grid-1 .photo-grid-item {
-  aspect-ratio: 21 / 9;
 }
 
 .photo-grid-2 {
@@ -553,25 +554,11 @@ button.button-ghost {
 }
 
 .photo-grid-3 {
-  grid-template-columns: 1.4fr 1fr;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-}
-
-.photo-grid-3 .photo-grid-item:first-child {
-  grid-row: 1 / 3;
-  aspect-ratio: auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .photo-grid-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.photo-grid-5 .photo-grid-item {
-  aspect-ratio: 3 / 4;
-}
-
-.photo-grid-5 .photo-grid-item:nth-child(2n) {
-  margin-top: 1.4rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .story-group-copy {
@@ -1997,17 +1984,8 @@ button.button-ghost {
     grid-template-columns: 1fr;
   }
 
-  .photo-grid-3 .photo-grid-item:first-child {
-    grid-row: auto;
-    aspect-ratio: 16 / 9;
-  }
-
   .photo-grid-5 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .photo-grid-5 .photo-grid-item:nth-child(2n) {
-    margin-top: 0;
   }
 
   .story-copy h2,
