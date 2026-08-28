@@ -1,5 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+test("keeps the story header in the primary brand color", async ({ page }) => {
+  await page.goto("/story");
+
+  await expect(page.locator(".story-page-header")).toHaveCSS(
+    "background-color",
+    "rgb(1, 45, 204)",
+  );
+});
+
 test("shows every story image without cropping at its natural aspect ratio", async ({
   page,
 }) => {

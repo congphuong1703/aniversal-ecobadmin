@@ -388,7 +388,7 @@ button.button-ghost {
 
 .story-page-header {
   border-bottom: 1px solid var(--border);
-  background: var(--navy);
+  background: var(--primary);
 }
 
 .story-page-header-inner {
