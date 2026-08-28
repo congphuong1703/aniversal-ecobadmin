@@ -66,6 +66,7 @@ export function RsvpExperience() {
   const [step, setStep] = useState<ExperienceStep>("selecting");
   const [guests, setGuests] = useState<readonly PublicGuest[]>([]);
   const [isLoadingGuests, setIsLoadingGuests] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState("");
   const [typedName, setTypedName] = useState("");
   const [verificationToken, setVerificationToken] = useState("");
@@ -169,6 +170,10 @@ export function RsvpExperience() {
   async function verifyGuest(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
 
+    if (isVerifying) {
+      return;
+    }
+
     if (!selectedGuest || !typedName.trim()) {
       setError("Vui lòng nhập họ và tên đầy đủ.");
       nameInputRef.current?.focus();
@@ -176,6 +181,7 @@ export function RsvpExperience() {
     }
 
     setError("");
+    setIsVerifying(true);
     setStatus("Đang xác minh thông tin khách mời…");
 
     try {
@@ -196,7 +202,7 @@ export function RsvpExperience() {
             : apiError,
         );
         setStatus("Xác minh chưa thành công.");
-        nameInputRef.current?.focus();
+        window.requestAnimationFrame(() => nameInputRef.current?.focus());
         return;
       }
 
@@ -216,6 +222,8 @@ export function RsvpExperience() {
       setStep("failure");
       setError("Không thể kết nối để xác minh. Tên bạn nhập vẫn được giữ lại.");
       setStatus("Mất kết nối trong lúc xác minh.");
+    } finally {
+      setIsVerifying(false);
     }
   }
 
@@ -422,6 +430,7 @@ export function RsvpExperience() {
           <input
             aria-describedby={error ? "verification-error" : undefined}
             autoComplete="name"
+            disabled={isVerifying}
             id="guest-name"
             onChange={(event) => {
               setTypedName(event.target.value);
@@ -438,6 +447,7 @@ export function RsvpExperience() {
           <div className="form-actions">
             <button
               className="button-ghost"
+              disabled={isVerifying}
               type="button"
               onClick={chooseAnotherGuest}
             >
@@ -446,14 +456,35 @@ export function RsvpExperience() {
             {failed ? (
               <button
                 className="button-primary"
+                disabled={isVerifying}
                 type="button"
                 onClick={() => void verifyGuest()}
               >
-                Thử xác minh lại
+                {isVerifying ? (
+                  <>
+                    <span aria-hidden="true" className="button-spinner" />
+                    Đang xác minh…
+                  </>
+                ) : (
+                  "Thử xác minh lại"
+                )}
               </button>
             ) : (
-              <button className="button-primary" type="submit">
-                Xác minh <span aria-hidden="true">→</span>
+              <button
+                className="button-primary"
+                disabled={isVerifying}
+                type="submit"
+              >
+                {isVerifying ? (
+                  <>
+                    <span aria-hidden="true" className="button-spinner" />
+                    Đang xác minh…
+                  </>
+                ) : (
+                  <>
+                    Xác minh <span aria-hidden="true">→</span>
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -583,7 +614,14 @@ export function RsvpExperience() {
               disabled={isSubmitting}
               type="submit"
             >
-              {isSubmitting ? "Đang gửi…" : "Gửi phản hồi"}
+              {isSubmitting ? (
+                <>
+                  <span aria-hidden="true" className="button-spinner" />
+                  Đang gửi…
+                </>
+              ) : (
+                "Gửi phản hồi"
+              )}
             </button>
           )}
         </div>
@@ -672,6 +710,7 @@ export function RsvpExperience() {
       </div>
       {visibleStep !== "selecting" ? (
         <Modal
+          busy={isVerifying || step === "submitting"}
           label={
             selectedGuest
               ? `Phiếu mời · ${selectedGuest.maskedName}`

@@ -129,6 +129,84 @@ describe("RsvpExperience", () => {
     expect(nameInput).toHaveValue("Nguyễn Văn An");
   });
 
+  it("shows and locks the verification loading action while the request is pending", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    let resolveVerification!: (response: Response) => void;
+
+    render(<RsvpExperience />);
+    await selectFirstGuest(user);
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveVerification = resolve;
+        }),
+    );
+
+    const nameInput = screen.getByLabelText(/họ và tên đầy đủ/i);
+    await user.type(nameInput, "Nguyễn Văn An");
+    await user.click(screen.getByRole("button", { name: /^xác minh/i }));
+
+    const loadingButton = screen.getByRole("button", {
+      name: /đang xác minh/i,
+    });
+    expect(loadingButton).toBeDisabled();
+    expect(loadingButton.querySelector(".button-spinner")).toBeInTheDocument();
+    expect(nameInput).toBeDisabled();
+    expect(screen.getByRole("button", { name: /đóng/i })).toBeDisabled();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    resolveVerification(
+      new Response(
+        JSON.stringify({ verificationToken: "signed-token", guest: GUESTS[0] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    await screen.findByRole("heading", { name: /bạn sẽ tham dự chứ/i });
+  });
+
+  it("shows the same locked loading action when verification is retried", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    let resolveRetry!: (response: Response) => void;
+
+    render(<RsvpExperience />);
+    await selectFirstGuest(user);
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await user.type(
+      screen.getByLabelText(/họ và tên đầy đủ/i),
+      "Nguyễn Văn An",
+    );
+    await user.click(screen.getByRole("button", { name: /^xác minh/i }));
+    await screen.findByRole("button", { name: /thử xác minh lại/i });
+
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRetry = resolve;
+        }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /thử xác minh lại/i }),
+    );
+
+    const loadingButton = screen.getByRole("button", {
+      name: /đang xác minh/i,
+    });
+    expect(loadingButton).toBeDisabled();
+    expect(loadingButton.querySelector(".button-spinner")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    resolveRetry(
+      new Response(
+        JSON.stringify({ verificationToken: "signed-token", guest: GUESTS[0] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    await screen.findByRole("heading", { name: /bạn sẽ tham dự chứ/i });
+  });
+
   it("requires an attendance choice and focuses the first invalid control", async () => {
     mockGuestLoad();
     const user = userEvent.setup();
@@ -164,6 +242,73 @@ describe("RsvpExperience", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent(/tối đa 1\.000 ký tự/i);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows and locks the submission loading action while the request is pending", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    let resolveSubmission!: (response: Response) => void;
+
+    render(<RsvpExperience />);
+    await verifyFirstGuest(user);
+    await user.click(screen.getByRole("radio", { name: /^tham dự$/i }));
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSubmission = resolve;
+        }),
+    );
+    await user.click(screen.getByRole("button", { name: /gửi phản hồi/i }));
+
+    const loadingButton = screen.getByRole("button", { name: /đang gửi/i });
+    expect(loadingButton).toBeDisabled();
+    expect(loadingButton.querySelector(".button-spinner")).toBeInTheDocument();
+    expect(screen.getByLabelText(/lời nhắn/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /đóng/i })).toBeDisabled();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    resolveSubmission(
+      new Response(
+        JSON.stringify({ submission: SUBMISSION, deduplicated: false }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    await screen.findByText(/hẹn gặp bạn/i);
+  });
+
+  it("shows the same locked loading action when submission is retried", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    let resolveRetry!: (response: Response) => void;
+
+    render(<RsvpExperience />);
+    await verifyFirstGuest(user);
+    await user.click(screen.getByRole("radio", { name: /^tham dự$/i }));
+    fetchMock.mockRejectedValueOnce(new TypeError("Response lost"));
+    await user.click(screen.getByRole("button", { name: /gửi phản hồi/i }));
+    await screen.findByRole("button", { name: /thử gửi lại/i });
+
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRetry = resolve;
+        }),
+    );
+    await user.click(screen.getByRole("button", { name: /thử gửi lại/i }));
+
+    const loadingButton = screen.getByRole("button", { name: /đang gửi/i });
+    expect(loadingButton).toBeDisabled();
+    expect(loadingButton.querySelector(".button-spinner")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    resolveRetry(
+      new Response(
+        JSON.stringify({ submission: SUBMISSION, deduplicated: true }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    await screen.findByText(/hẹn gặp bạn/i);
   });
 
   it.each([

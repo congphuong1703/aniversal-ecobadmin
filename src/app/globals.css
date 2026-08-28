@@ -915,6 +915,16 @@ button.button-ghost {
   color: var(--navy);
 }
 
+.button-spinner {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 700ms linear infinite;
+}
+
 .rsvp-loading {
   display: flex;
   flex-direction: column;
@@ -1843,6 +1853,12 @@ button.button-ghost {
   }
 }
 
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 1050px) {
   .hero-content {
     grid-template-columns: 1fr;
@@ -1899,6 +1915,74 @@ button.button-ghost {
 
   .admin-summary-card:nth-child(-n + 2) {
     border-bottom: 1px solid var(--primary);
+  }
+}
+
+@media (min-width: 761px) and (max-height: 850px) {
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal-panel {
+    max-height: calc(100svh - 1.5rem);
+  }
+
+  .modal-close {
+    top: 0.65rem;
+    right: 0.65rem;
+  }
+
+  .rsvp-panel-centered,
+  .rsvp-success,
+  .rsvp-form {
+    padding: 1.75rem clamp(2rem, 3.2vw, 2.75rem);
+  }
+
+  .rsvp-panel-centered h3,
+  .rsvp-success h3,
+  .rsvp-form h3 {
+    margin-top: 0.4rem;
+    font-size: clamp(2.5rem, 4vw, 3.4rem);
+  }
+
+  .selected-guest {
+    min-height: 540px;
+  }
+
+  .selected-guest > div {
+    right: 1.5rem;
+    bottom: 1.5rem;
+    left: 1.5rem;
+  }
+
+  .rsvp-form > div:first-child > p {
+    margin: 0.75rem 0 1.25rem;
+    line-height: 1.55;
+  }
+
+  .rsvp-form input[type="text"] {
+    height: 52px;
+  }
+
+  .rsvp-form textarea {
+    min-height: 94px;
+  }
+
+  .attendance-options {
+    margin-bottom: 1rem;
+  }
+
+  .attendance-options label > span {
+    min-height: 84px;
+  }
+
+  .form-actions {
+    margin-top: 1.25rem;
+  }
+
+  .success-mark {
+    width: 62px;
+    height: 62px;
   }
 }
 

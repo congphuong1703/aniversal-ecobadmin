@@ -34,6 +34,16 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBe(true);
 }
 
+async function expectDialogWithoutScroll(page: Page) {
+  await expect
+    .poll(() =>
+      page
+        .getByRole("dialog")
+        .evaluate((dialog) => dialog.scrollHeight <= dialog.clientHeight),
+    )
+    .toBe(true);
+}
+
 async function openRsvp(page: Page) {
   await page.goto("/#rsvp");
   await expect(page.locator(".guest-name-item").first()).toBeVisible();
@@ -58,6 +68,43 @@ test.beforeEach(async ({ context, request }, testInfo) => {
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
   await context.setExtraHTTPHeaders({ "x-e2e-worker-id": scope });
   await resetRepository(request, scope);
+});
+
+test("keeps the confirmation flow visible without modal scrolling on a laptop viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await openRsvp(page);
+  await page.locator(".guest-name-item").first().click();
+  await expectDialogWithoutScroll(page);
+
+  const nameInput = page.getByLabel("Họ và tên đầy đủ");
+  await nameInput.fill("Tên Không Khớp");
+  await page.getByRole("button", { name: /Xác minh/ }).click();
+  await expect(
+    page.getByText("Thông tin chưa khớp với tên đã chọn."),
+  ).toBeVisible();
+  await expectDialogWithoutScroll(page);
+
+  await nameInput.fill(E2E_FIRST_GUEST_NAME);
+  await page.getByRole("button", { name: /Xác minh/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Bạn sẽ tham dự chứ?" }),
+  ).toBeVisible();
+  await expectDialogWithoutScroll(page);
+
+  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
+  await expect(
+    page.getByText("Vui lòng chọn tham dự hoặc không tham dự."),
+  ).toBeVisible();
+  await expectDialogWithoutScroll(page);
+
+  await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
+  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Cảm ơn bạn." }),
+  ).toBeVisible();
+  await expectDialogWithoutScroll(page);
 });
 
 test("completes an attending RSVP responsively and opens the approved map", async ({
