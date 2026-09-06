@@ -9,8 +9,8 @@ export function Hero() {
           <strong>Badminton</strong>
         </a>
         <div className="hero-nav-links">
-          <a className="nav-story" href="/story">Câu chuyện</a>
-          <a className="nav-rsvp" href="#rsvp">Tham dự <span aria-hidden="true">↘</span></a>
+          <a className="nav-story" href="/story">Biết thêm về chúng mình</a>
+          <a className="nav-rsvp" href="#rsvp">Xác nhận tham dự <span aria-hidden="true">↘</span></a>
         </div>
       </nav>
       <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
