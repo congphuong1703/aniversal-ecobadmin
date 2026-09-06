@@ -138,6 +138,17 @@ describe("RsvpExperience", () => {
     await user.click(screen.getByRole("button", { name: "Tham gia" }));
 
     expect(await screen.findByText(/Hẹn gặp bạn vào/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Nếu kế hoạch thay đổi/i),
+    ).not.toBeInTheDocument();
+    const successActions = screen.getByText("Gửi phản hồi mới").parentElement;
+    expect(successActions).toHaveClass("rsvp-success-actions");
+    expect(successActions?.firstElementChild).toHaveTextContent(
+      "Gửi phản hồi mới",
+    );
+    expect(successActions?.lastElementChild).toHaveTextContent(
+      "Mở Google Maps",
+    );
     const body = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
       guestId: string;
       attending: boolean;
@@ -176,6 +187,9 @@ describe("RsvpExperience", () => {
     await user.click(declineButton);
 
     expect(await screen.findByText(/Tiếc một chút/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Nếu kế hoạch thay đổi/i),
+    ).not.toBeInTheDocument();
     const body = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
       attending: boolean;
     };

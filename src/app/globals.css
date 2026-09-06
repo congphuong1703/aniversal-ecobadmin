@@ -1344,11 +1344,11 @@ button.button-ghost {
   line-height: 1.75;
 }
 
-.rsvp-success .success-note {
-  max-width: 480px;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.72rem;
+.rsvp-success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
 }
 
 .site-footer {

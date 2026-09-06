@@ -438,6 +438,13 @@ export function RsvpExperience() {
   }
 
   function renderSuccess() {
+    const resetResponse = () => {
+      setSubmissionId(null);
+      setError("");
+      setStep("responding");
+      setStatus("Bạn có thể gửi một phản hồi mới.");
+    };
+
     return (
       <div className="rsvp-panel rsvp-success">
         <span className="success-mark" aria-hidden="true">
@@ -450,14 +457,19 @@ export function RsvpExperience() {
             <p>
               Hẹn gặp bạn vào {EVENT.time} ngày {EVENT.date} tại {EVENT.venue}.
             </p>
-            <a
-              className="button-primary"
-              href={EVENT.mapUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Mở Google Maps <span aria-hidden="true">↗</span>
-            </a>
+            <div className="rsvp-success-actions">
+              <button className="button-ghost" type="button" onClick={resetResponse}>
+                Gửi phản hồi mới
+              </button>
+              <a
+                className="button-primary"
+                href={EVENT.mapUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Mở Google Maps <span aria-hidden="true">↗</span>
+              </a>
+            </div>
           </>
         ) : (
           <p>
@@ -465,22 +477,11 @@ export function RsvpExperience() {
             của bạn vẫn ở lại với đội.
           </p>
         )}
-        <p className="success-note">
-          Nếu kế hoạch thay đổi, bạn có thể gửi lại. Mỗi phản hồi mới sẽ được
-          lưu vào lịch sử.
-        </p>
-        <button
-          className="button-ghost"
-          type="button"
-          onClick={() => {
-            setSubmissionId(null);
-            setError("");
-            setStep("responding");
-            setStatus("Bạn có thể gửi một phản hồi mới.");
-          }}
-        >
-          Gửi phản hồi mới
-        </button>
+        {!submittedAttending ? (
+          <button className="button-ghost" type="button" onClick={resetResponse}>
+            Gửi phản hồi mới
+          </button>
+        ) : null}
       </div>
     );
   }
