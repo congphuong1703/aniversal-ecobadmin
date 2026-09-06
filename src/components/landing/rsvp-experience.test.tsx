@@ -186,7 +186,11 @@ describe("RsvpExperience", () => {
     );
     await user.click(declineButton);
 
-    expect(await screen.findByText(/Tiếc một chút/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Cảm ơn bạn đã cho EcoBadminton biết. Thật tiếc quá, hẹn bạn vào dịp gần nhất nhaaa!",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText(/Nếu kế hoạch thay đổi/i),
     ).not.toBeInTheDocument();
@@ -194,6 +198,45 @@ describe("RsvpExperience", () => {
       attending: boolean;
     };
     expect(body.attending).toBe(false);
+  });
+
+  it("shows a warm decline message when the guest leaves a note", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    render(<RsvpExperience />);
+    await selectFirstGuest(user);
+    await user.type(
+      screen.getByLabelText(/Lời nhắn cho EcoBadminton/i),
+      "Mình gửi lời chúc đến cả đội!",
+    );
+
+    const declineButton = screen.getByRole("button", {
+      name: "Hẹn dịp khác",
+    });
+    fireEvent.mouseEnter(declineButton);
+    fireEvent.mouseEnter(declineButton);
+    fireEvent.mouseEnter(declineButton);
+
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        submission: {
+          ...SUBMISSION,
+          attending: false,
+          message: "Mình gửi lời chúc đến cả đội!",
+        },
+        deduplicated: false,
+      }),
+    );
+    await user.click(declineButton);
+
+    expect(
+      await screen.findByText(
+        "Cảm ơn bạn đã cho EcoBadminton biết. Tiếc một chút, nhưng chúng mình vẫn rất trân quý lời chúc của bạn!",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Nếu kế hoạch thay đổi/i),
+    ).not.toBeInTheDocument();
   });
 
   it("enforces the 1,000 character message limit", async () => {

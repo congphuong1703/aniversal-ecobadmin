@@ -444,6 +444,7 @@ export function RsvpExperience() {
       setStep("responding");
       setStatus("Bạn có thể gửi một phản hồi mới.");
     };
+    const hasSubmittedMessage = message.trim().length > 0;
 
     return (
       <div className="rsvp-panel rsvp-success">
@@ -473,8 +474,9 @@ export function RsvpExperience() {
           </>
         ) : (
           <p>
-            Cảm ơn bạn đã cho EcoBadminton biết. Tiếc một chút, nhưng lời chúc
-            của bạn vẫn ở lại với đội.
+            {hasSubmittedMessage
+              ? "Cảm ơn bạn đã cho EcoBadminton biết. Tiếc một chút, nhưng chúng mình vẫn rất trân quý lời chúc của bạn!"
+              : "Cảm ơn bạn đã cho EcoBadminton biết. Thật tiếc quá, hẹn bạn vào dịp gần nhất nhaaa!"}
           </p>
         )}
         {!submittedAttending ? (
