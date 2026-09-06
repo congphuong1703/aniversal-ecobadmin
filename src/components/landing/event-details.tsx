@@ -21,8 +21,8 @@ export function EventDetails() {
             Cùng EcoBadminton nhìn lại hành trình vừa qua
           </h2>
           <p>
-            Một buổi tối không CẦU kỳ, không CHẠY deadline — chỉ cần đúng người,
-            đúng bàn và đúng thời điểm.
+            Một buổi tối không CẦU kỳ, không CHẠY deadline — chỉ cần có chúng ta
+            là đủ.
           </p>
         </div>
         <div className="event-card reveal reveal-delay">
