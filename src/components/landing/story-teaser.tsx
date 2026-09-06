@@ -17,7 +17,7 @@ export function StoryTeaser() {
             làm và kết nối với nhau qua những trận cầu đầy kịch tính.
           </p>
           <Link className="button-primary" href="/story">
-            Xem câu chuyện <span aria-hidden="true">→</span>
+            Câu chuyện của chúng mình <span aria-hidden="true">→</span>
           </Link>
         </div>
       </div>
