@@ -253,7 +253,9 @@ type StoryChapterProps = {
   description: string;
   images: readonly StoryGalleryImage[];
   variant?: "portrait" | "landscape" | "square";
+  layout?: "feature" | "duo" | "collage" | "strip" | "mosaic";
   tone?: "ivory" | "navy";
+  arrangement?: "split" | "reverse" | "stacked";
 };
 
 function StoryChapter({
@@ -261,11 +263,13 @@ function StoryChapter({
   description,
   images,
   variant = "landscape",
+  layout = "feature",
   tone = "ivory",
+  arrangement = "split",
 }: StoryChapterProps) {
   return (
     <section
-      className={`story-chapter story-chapter-${tone}`}
+      className={`story-chapter story-chapter-${tone} story-chapter-${arrangement} story-chapter-layout-${layout}`}
       aria-label={description}
     >
       <div className="section-shell story-chapter-inner">
@@ -273,7 +277,12 @@ function StoryChapter({
           <h2 className="story-chapter-description">{description}</h2>
         </div>
         <div className="story-chapter-media reveal reveal-delay">
-          <StoryGallery images={images} label={label} variant={variant} />
+          <StoryGallery
+            images={images}
+            label={label}
+            layout={layout}
+            variant={variant}
+          />
         </div>
       </div>
     </section>
@@ -397,6 +406,7 @@ export function Story() {
         images={STORY_IMAGES.page2}
         label="Lên đường"
         description="Đã tìm thấy bí kíp thất truyền từ thời thượng cổ."
+        layout="feature"
         tone="ivory"
         variant="portrait"
       />
@@ -404,6 +414,8 @@ export function Story() {
         images={STORY_IMAGES.page3}
         label="Sẵn sàng"
         description="Luôn trong tâm thế sẵn sàng ra sân."
+        arrangement="reverse"
+        layout="duo"
         tone="navy"
         variant="portrait"
       />
@@ -411,6 +423,8 @@ export function Story() {
         images={STORY_IMAGES.page4}
         label="Cùng tiến bộ"
         description="Ở EcoBadminton, các newbie không cần lo làm sao trở nên pro vì đã có pro lo."
+        arrangement="stacked"
+        layout="collage"
         tone="ivory"
         variant="landscape"
       />
@@ -418,6 +432,8 @@ export function Story() {
         images={STORY_IMAGES.page5}
         label="Không ngừng ra sân"
         description="Thật sự thì 2 tuần/buổi vẫn chưa thấm vào đâu so với tinh thần ở EcoBadminton, bạn nghĩ sao nếu chúng mình tăng lên 5 buổi/tuần?"
+        arrangement="stacked"
+        layout="strip"
         tone="navy"
         variant="landscape"
       />
@@ -425,6 +441,8 @@ export function Story() {
         images={STORY_IMAGES.page6}
         label="Đời sống tinh thần"
         description="Ngoài chăm lo đời sống thể thao, chúng mình còn rất chú trọng đến đời sống tinh thần của các thành viên nữa."
+        arrangement="reverse"
+        layout="mosaic"
         tone="ivory"
         variant="square"
       />
