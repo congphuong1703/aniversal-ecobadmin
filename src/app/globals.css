@@ -1237,6 +1237,11 @@ button.button-ghost {
   transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
+.rsvp-decline-button[aria-disabled="true"] {
+  cursor: pointer;
+  opacity: 1;
+}
+
 .attendance-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
