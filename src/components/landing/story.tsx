@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import {
   StoryGallery,
@@ -251,6 +252,7 @@ const STORY_IMAGES: Record<string, readonly StoryGalleryImage[]> = {
 type StoryChapterProps = {
   label: string;
   description: string;
+  context: string;
   images: readonly StoryGalleryImage[];
   variant?: "portrait" | "landscape" | "square";
   layout?: "feature" | "duo" | "collage" | "strip" | "mosaic";
@@ -261,6 +263,7 @@ type StoryChapterProps = {
 function StoryChapter({
   label,
   description,
+  context,
   images,
   variant = "landscape",
   layout = "feature",
@@ -274,7 +277,12 @@ function StoryChapter({
     >
       <div className="section-shell story-chapter-inner">
         <div className="story-chapter-heading reveal">
+          <div className="story-chapter-tag">
+            <span>{label}</span>
+            <i aria-hidden="true" />
+          </div>
           <h2 className="story-chapter-description">{description}</h2>
+          <p className="story-chapter-context">{context}</p>
         </div>
         <div className="story-chapter-media reveal reveal-delay">
           <StoryGallery
@@ -371,9 +379,23 @@ function StoryInvite() {
     <section className="story-invite-section" aria-labelledby="story-invite-title">
       <div className="section-shell story-invite-inner">
         <div className="story-invite-heading reveal">
+          <div className="story-invite-tag">Một chỗ cho người mới</div>
           <p className="story-invite-intro">
             Ở EcoBadminton chúng mình luôn chào đón các thành viên mới và chắc chắn rằng:
           </p>
+        </div>
+        <div className="story-invite-art reveal reveal-delay">
+          <div className="story-invite-art-frame">
+            <Image
+              alt="Minh hoạ EcoTek và quả cầu lông cùng mời bạn tham gia"
+              fill
+              priority
+              sizes="(min-width: 1050px) 30vw, (min-width: 760px) 55vw, calc(100vw - 40px)"
+              src="/story/invite-ecotek.jpg"
+              style={{ objectFit: "cover" }}
+            />
+          </div>
+          <span>Thêm một người bạn, thêm một trận cầu.</span>
         </div>
         <div className="story-invite-content reveal reveal-delay">
           <h2 className="font-display" id="story-invite-title">
@@ -406,6 +428,7 @@ export function Story() {
         images={STORY_IMAGES.page2}
         label="Lên đường"
         description="Đã tìm thấy bí kíp thất truyền từ thời thượng cổ."
+        context="Chúng mình bắt đầu bằng một lời rủ rất đơn giản: rời màn hình, cầm vợt lên và thử xem một buổi tối có thể vui đến đâu."
         layout="feature"
         tone="ivory"
         variant="portrait"
@@ -414,6 +437,7 @@ export function Story() {
         images={STORY_IMAGES.page3}
         label="Sẵn sàng"
         description="Luôn trong tâm thế sẵn sàng ra sân."
+        context="Không ai cần đợi đến khi thật giỏi mới bước ra sân. Chỉ cần sẵn sàng, phần còn lại đã có đồng đội."
         arrangement="reverse"
         layout="duo"
         tone="navy"
@@ -423,6 +447,7 @@ export function Story() {
         images={STORY_IMAGES.page4}
         label="Cùng tiến bộ"
         description="Ở EcoBadminton, các newbie không cần lo làm sao trở nên pro vì đã có pro lo."
+        context="Từ những cú phát cầu còn vụng về đến những pha phối hợp ăn ý, mỗi người đều có một người bạn bên cạnh để chỉ dẫn và cổ vũ."
         arrangement="stacked"
         layout="collage"
         tone="ivory"
@@ -432,6 +457,7 @@ export function Story() {
         images={STORY_IMAGES.page5}
         label="Không ngừng ra sân"
         description="Thật sự thì 2 tuần/buổi vẫn chưa thấm vào đâu so với tinh thần ở EcoBadminton, bạn nghĩ sao nếu chúng mình tăng lên 5 buổi/tuần?"
+        context="Ban đầu là một cuộc hẹn cách tuần. Rồi chẳng ai muốn chờ lâu hơn — vì trên sân luôn có một trận cầu mới, một tiếng cười mới."
         arrangement="stacked"
         layout="strip"
         tone="navy"
@@ -441,6 +467,7 @@ export function Story() {
         images={STORY_IMAGES.page6}
         label="Đời sống tinh thần"
         description="Ngoài chăm lo đời sống thể thao, chúng mình còn rất chú trọng đến đời sống tinh thần của các thành viên nữa."
+        context="Những bữa tiệc nhỏ, lời chúc bất ngờ và những lần ngồi lại sau trận đấu khiến EcoBadminton trở thành một nhóm người thật sự thuộc về nhau."
         arrangement="reverse"
         layout="mosaic"
         tone="ivory"

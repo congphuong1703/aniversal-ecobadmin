@@ -19,6 +19,24 @@ type StoryGalleryProps = {
 
 const ROTATION_MS = 2000;
 
+function getVisibleSlotCount(
+  layout: StoryGalleryProps["layout"],
+  imageCount: number,
+) {
+  const requestedCount =
+    layout === "feature"
+      ? 1
+      : layout === "duo"
+        ? 2
+        : layout === "collage"
+          ? 3
+          : layout === "mosaic"
+            ? 5
+            : 4;
+
+  return Math.min(requestedCount, imageCount);
+}
+
 export function StoryGallery({
   images,
   label,
@@ -44,6 +62,12 @@ export function StoryGallery({
     return null;
   }
 
+  const visibleSlotCount = getVisibleSlotCount(layout, images.length);
+  const visibleImages = Array.from({ length: visibleSlotCount }, (_, slot) => {
+    const index = (activeIndex + slot) % images.length;
+    return { image: images[index], index, slot };
+  });
+
   return (
     <div
       className={`story-gallery story-gallery-${variant} story-gallery-layout-${layout}`}
@@ -53,10 +77,10 @@ export function StoryGallery({
     >
       <div className="story-gallery-frame">
         <div className="story-gallery-stage">
-          {images.map((image, index) => (
+          {visibleImages.map(({ image, index, slot }) => (
             <figure
-              className={`story-gallery-slide${index === activeIndex ? " is-active" : ""}`}
-              key={image.src}
+              className={`story-gallery-slide story-gallery-slot-${slot}${slot === 0 ? " is-active" : ""}`}
+              key={`${image.src}-${slot}`}
             >
               <Image
                 alt={image.alt}
