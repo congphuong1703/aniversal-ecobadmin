@@ -16,9 +16,9 @@ export function EventDetails() {
     >
       <div className="section-shell event-layout">
         <div className="event-title reveal">
-          <span className="eyebrow">Chung một nhịp</span>
+          <span className="eyebrow">Chung một nhịp cùng EcoBadminton</span>
           <h2 className="font-display" id="event-title">
-            Cùng EcoBadminton nhìn lại hành trình vừa qua
+            Nhìn lại và Bước tiếp
           </h2>
           <p>
             Một buổi tối không CẦU kỳ, không CHẠY deadline — chỉ cần có chúng ta
