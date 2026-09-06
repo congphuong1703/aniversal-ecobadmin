@@ -9,7 +9,9 @@ export function Hero() {
           <strong>Badminton</strong>
         </a>
         <div className="hero-nav-links">
-          <a className="nav-story" href="/story">Biết thêm về chúng mình</a>
+          <a className="nav-story" href="/story?from=page1">
+            Biết thêm về chúng mình
+          </a>
           <a className="nav-rsvp" href="#rsvp">Xác nhận tham dự <span aria-hidden="true">↘</span></a>
         </div>
       </nav>

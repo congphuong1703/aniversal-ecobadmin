@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   description: "Những khoảnh khắc trên sân của EcoBadminton trong một năm qua.",
 };
 
-export default function StoryPage() {
+type StoryPageProps = {
+  searchParams: Promise<{ from?: string }>;
+};
+
+export default async function StoryPage({ searchParams }: StoryPageProps) {
+  const { from } = await searchParams;
+  const backHref = from === "page2" ? "/#story-teaser-title" : "/#top";
+
   return (
     <main>
       <header className="story-page-header">
@@ -17,8 +24,8 @@ export default function StoryPage() {
             <span>Eco</span>
             <strong>Badminton</strong>
           </Link>
-          <Link className="story-page-back" href="/">
-            <span aria-hidden="true">←</span> Về trang chủ
+          <Link className="story-page-back" href={backHref}>
+            <span aria-hidden="true">←</span> Quay lại
           </Link>
         </div>
       </header>
