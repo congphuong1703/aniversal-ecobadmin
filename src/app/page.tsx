@@ -1,4 +1,3 @@
-import { Anniversary } from "@/components/landing/anniversary";
 import { AchievementSlide } from "@/components/landing/achievement-slide";
 import { EventDetails } from "@/components/landing/event-details";
 import { Hero } from "@/components/landing/hero";
@@ -13,7 +12,6 @@ export default function Home() {
       <StoryTeaser />
       <AchievementSlide />
       <EventDetails />
-      <Anniversary />
       <RsvpExperience />
       <footer className="site-footer">
         <div className="section-shell">
