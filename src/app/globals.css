@@ -397,8 +397,12 @@ button.button-ghost {
 }
 
 .story-page-header {
+  position: sticky;
+  z-index: 50;
+  top: 0;
   border-bottom: 1px solid var(--border);
-  background: #fff;
+  background: var(--primary);
+  box-shadow: 0 8px 24px rgb(16 33 63 / 12%);
 }
 
 .story-page-header-inner {
@@ -406,13 +410,13 @@ button.button-ghost {
   align-items: center;
   justify-content: space-between;
   width: min(100% - 48px, 1380px);
-  height: 90px;
+  height: 62px;
   margin-inline: auto;
 }
 
 .story-page-header-inner .brand-mark {
-  color: var(--navy);
-  font-size: 0.92rem;
+  color: var(--white);
+  font-size: 0.82rem;
   letter-spacing: 0.01em;
 }
 
@@ -2575,8 +2579,50 @@ button.button-ghost {
   line-height: 1.2;
 }
 
+.story-timeline-intro-copy {
+  max-width: 650px;
+  margin: 1.25rem 0 0;
+  color: var(--navy-muted);
+  font-size: clamp(0.98rem, 1.25vw, 1.12rem);
+  line-height: 1.8;
+}
+
+.story-timeline-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+  border-block: 1px solid rgb(16 33 63 / 14%);
+  background: rgb(16 33 63 / 14%);
+}
+
+.story-timeline-facts > div {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.2rem;
+  background: rgb(255 255 255 / 54%);
+}
+
+.story-timeline-facts strong {
+  color: var(--primary);
+  font-family: var(--font-display-face), serif;
+  font-size: clamp(1.35rem, 2.4vw, 2.2rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.story-timeline-facts span {
+  color: var(--navy-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .story-timeline-card {
   margin-top: clamp(3rem, 6vw, 5rem);
+  padding-bottom: 5.5rem;
   border-block: 1px solid var(--border);
 }
 
@@ -2726,6 +2772,53 @@ button.button-ghost {
   transform: none;
 }
 
+.story-timeline-point-rail {
+  position: absolute;
+  top: calc(100% + 0.1rem);
+  left: 50%;
+  width: 1px;
+  height: 1.8rem;
+  background: linear-gradient(180deg, rgb(1 45 204 / 38%), transparent);
+  transform: translateX(-50%);
+}
+
+.story-timeline-point-info {
+  position: absolute;
+  top: calc(100% + 2rem);
+  left: 50%;
+  width: min(180px, 15vw);
+  color: rgb(16 33 63 / 56%);
+  font-size: 0.65rem;
+  line-height: 1.45;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.story-timeline-point-info strong,
+.story-timeline-point-info span {
+  display: block;
+}
+
+.story-timeline-point-info strong {
+  color: rgb(1 45 204 / 62%);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.story-timeline-point.is-first .story-timeline-point-info {
+  left: 0;
+  transform: none;
+  text-align: left;
+}
+
+.story-timeline-point.is-last .story-timeline-point-info {
+  right: 0;
+  left: auto;
+  transform: none;
+  text-align: right;
+}
+
 .story-timeline-tooltip-count {
   display: block;
   margin-top: 0.3rem;
@@ -2751,7 +2844,7 @@ button.button-ghost {
   margin: 0.75rem 0 0;
   padding: 0.75rem 0 0 1rem;
   border-top: 1px solid var(--border);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   line-height: 1.4;
 }
 
@@ -2837,9 +2930,9 @@ button.button-ghost {
 .story-chapter-layout-strip .story-chapter-description {
   max-width: 980px;
   font-family: var(--font-display-face), serif;
-  font-size: clamp(1.8rem, 3.2vw, 3.6rem);
+  font-size: clamp(1.45rem, 2.35vw, 2.7rem);
   font-weight: 500;
-  line-height: 1.08;
+  line-height: 1.18;
 }
 
 .story-chapter-heading {
@@ -2864,6 +2957,14 @@ button.button-ghost {
   width: 2.5rem;
   height: 1px;
   background: currentColor;
+}
+
+.story-chapter-pretitle {
+  max-width: 520px;
+  margin: 0 0 1.2rem;
+  color: var(--navy-muted);
+  font-size: clamp(1rem, 1.5vw, 1.28rem);
+  line-height: 1.65;
 }
 
 .story-chapter-description {
@@ -3003,16 +3104,16 @@ button.button-ghost {
 }
 
 .story-gallery-layout-duo .story-gallery-stage {
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
 }
 
 .story-gallery-layout-duo .story-gallery-slide {
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 4 / 3;
 }
 
 .story-gallery-layout-duo .story-gallery-slide:nth-child(2) {
-  margin-top: clamp(2rem, 8vw, 6rem);
+  margin-top: 0;
 }
 
 .story-gallery-layout-collage .story-gallery-stage {
@@ -3113,7 +3214,7 @@ button.button-ghost {
 
 .story-invite-inner {
   display: grid;
-  grid-template-columns: minmax(200px, 0.68fr) minmax(250px, 0.75fr) minmax(300px, 0.9fr);
+  grid-template-columns: minmax(280px, 0.85fr) minmax(300px, 1fr);
   gap: clamp(2.5rem, 6vw, 6rem);
   align-items: start;
 }
@@ -3296,8 +3397,13 @@ button.button-ghost {
     font-size: clamp(1.25rem, 5.6vw, 1.75rem);
   }
 
+  .story-timeline-facts {
+    grid-template-columns: 1fr;
+  }
+
   .story-timeline-card {
     margin-top: 4rem;
+    padding-bottom: 7rem;
   }
 
   .story-timeline-plot {
@@ -3337,6 +3443,19 @@ button.button-ghost {
 
   .story-timeline-point-count {
     font-size: 0.68rem;
+  }
+
+  .story-timeline-point-info {
+    width: 92px;
+    font-size: 0.56rem;
+  }
+
+  .story-timeline-point-info strong {
+    font-size: 0.5rem;
+  }
+
+  .story-chapter-layout-strip .story-chapter-description {
+    font-size: clamp(1.35rem, 5.4vw, 1.75rem);
   }
 }
 

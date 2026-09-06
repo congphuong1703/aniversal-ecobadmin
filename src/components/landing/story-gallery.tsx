@@ -22,6 +22,7 @@ const ROTATION_MS = 2000;
 function getVisibleSlotCount(
   layout: StoryGalleryProps["layout"],
   imageCount: number,
+  activeIndex: number,
 ) {
   const requestedCount =
     layout === "feature"
@@ -29,10 +30,12 @@ function getVisibleSlotCount(
       : layout === "duo"
         ? 2
         : layout === "collage"
-          ? 3
+          ? 5
           : layout === "mosaic"
-            ? 5
-            : 4;
+            ? activeIndex % 2 === 0
+              ? 5
+              : 4
+            : 8;
 
   return Math.min(requestedCount, imageCount);
 }
@@ -52,19 +55,28 @@ export function StoryGallery({
     }
 
     const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % images.length);
+      setActiveIndex((index) =>
+        layout === "mosaic" && images.length > 5
+          ? (index + 1) % 2
+          : (index + 1) % images.length,
+      );
     }, ROTATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [images.length, isPaused]);
+  }, [images.length, isPaused, layout]);
 
   if (images.length === 0) {
     return null;
   }
 
-  const visibleSlotCount = getVisibleSlotCount(layout, images.length);
+  const visibleSlotCount = getVisibleSlotCount(layout, images.length, activeIndex);
+  const mosaicPhase = layout === "mosaic" && images.length > 5 ? activeIndex : 0;
+  const mosaicStart = mosaicPhase === 0 ? 0 : 5;
   const visibleImages = Array.from({ length: visibleSlotCount }, (_, slot) => {
-    const index = (activeIndex + slot) % images.length;
+    const index =
+      layout === "mosaic" && images.length > 5
+        ? (mosaicStart + slot) % images.length
+        : (activeIndex + slot) % images.length;
     return { image: images[index], index, slot };
   });
 
@@ -101,12 +113,36 @@ export function StoryGallery({
           {images.map((image, index) => (
             <button
               aria-label={`Xem ảnh ${index + 1} trong ${label}`}
-              aria-selected={index === activeIndex}
-              className={index === activeIndex ? "is-active" : ""}
+              aria-selected={
+                index ===
+                (layout === "mosaic" && images.length > 5
+                  ? activeIndex === 0
+                    ? 0
+                    : 5
+                  : activeIndex)
+              }
+              className={
+                index ===
+                (layout === "mosaic" && images.length > 5
+                  ? activeIndex === 0
+                    ? 0
+                    : 5
+                  : activeIndex)
+                  ? "is-active"
+                  : ""
+              }
               key={image.src}
               role="tab"
               type="button"
-              onClick={() => setActiveIndex(index)}
+              onClick={() =>
+                setActiveIndex(
+                  layout === "mosaic" && images.length > 5
+                    ? index < 5
+                      ? 0
+                      : 1
+                    : index,
+                )
+              }
             >
               <span aria-hidden="true" />
             </button>

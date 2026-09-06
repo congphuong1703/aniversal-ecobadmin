@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Image from "next/image";
 
 import {
@@ -43,6 +42,7 @@ const TIMELINE: readonly TimelineEntry[] = [
     displayCount: "8",
     x: 22,
     y: 64,
+    names: ["Đinh Dương Sơn"],
   },
   {
     date: "21/07/2026",
@@ -51,6 +51,7 @@ const TIMELINE: readonly TimelineEntry[] = [
     displayCount: "9",
     x: 36,
     y: 54,
+    names: ["Ngô Thục An"],
   },
   {
     date: "22/07/2026",
@@ -59,6 +60,7 @@ const TIMELINE: readonly TimelineEntry[] = [
     displayCount: "10",
     x: 50,
     y: 46,
+    names: ["Nguyễn Thùy Linh"],
   },
   {
     date: "13/08/2026",
@@ -67,6 +69,7 @@ const TIMELINE: readonly TimelineEntry[] = [
     displayCount: "12",
     x: 64,
     y: 35,
+    names: ["Kim Ngân", "Đoàn Thị Chi"],
   },
   {
     date: "19/08/2026",
@@ -75,12 +78,13 @@ const TIMELINE: readonly TimelineEntry[] = [
     displayCount: "13",
     x: 77,
     y: 27,
+    names: ["Lê Nhật Dương"],
   },
   {
-    date: "Hiện nay",
-    summary: "13 thành viên + 1 Mads Werner",
+    date: "Tương lai",
+    summary: "EcoBadminton đang tiếp tục mở rộng",
     count: 13,
-    displayCount: "13 + Mads",
+    displayCount: "13+",
     x: 92,
     y: 27,
   },
@@ -252,7 +256,9 @@ const STORY_IMAGES: Record<string, readonly StoryGalleryImage[]> = {
 type StoryChapterProps = {
   label: string;
   description: string;
-  context: string;
+  context?: string;
+  pretitle?: string;
+  showTag?: boolean;
   images: readonly StoryGalleryImage[];
   variant?: "portrait" | "landscape" | "square";
   layout?: "feature" | "duo" | "collage" | "strip" | "mosaic";
@@ -264,6 +270,8 @@ function StoryChapter({
   label,
   description,
   context,
+  pretitle,
+  showTag = true,
   images,
   variant = "landscape",
   layout = "feature",
@@ -277,12 +285,15 @@ function StoryChapter({
     >
       <div className="section-shell story-chapter-inner">
         <div className="story-chapter-heading reveal">
-          <div className="story-chapter-tag">
-            <span>{label}</span>
-            <i aria-hidden="true" />
-          </div>
+          {showTag ? (
+            <div className="story-chapter-tag">
+              <span>{label}</span>
+              <i aria-hidden="true" />
+            </div>
+          ) : null}
+          {pretitle ? <p className="story-chapter-pretitle">{pretitle}</p> : null}
           <h2 className="story-chapter-description">{description}</h2>
-          <p className="story-chapter-context">{context}</p>
+          {context ? <p className="story-chapter-context">{context}</p> : null}
         </div>
         <div className="story-chapter-media reveal reveal-delay">
           <StoryGallery
@@ -304,11 +315,33 @@ function StoryTimeline() {
       aria-labelledby="story-timeline-title"
     >
       <div className="section-shell">
-        <p className="story-timeline-intro reveal" id="story-timeline-title">
-          Khởi đầu với số lượng khiêm tốn, EcoBadminton đã không ngừng lớn lên.
-        </p>
+        <div className="story-timeline-intro-wrap reveal">
+          <p className="story-timeline-intro" id="story-timeline-title">
+            Khởi đầu với số lượng khiêm tốn, EcoBadminton đã không ngừng lớn lên.
+          </p>
+          <p className="story-timeline-intro-copy">
+            Ngày đầu tiên, 7 thành viên cùng đứng trên một sân cầu. Từ mỗi lần
+            rủ thêm một người bạn, đường line này dần thành hình — và câu chuyện
+            vẫn còn chỗ cho những người tiếp theo.
+          </p>
+        </div>
 
-        <div className="story-timeline-card reveal reveal-delay">
+        <div className="story-timeline-facts reveal reveal-delay">
+          <div>
+            <strong>12/09/2025</strong>
+            <span>Ngày thành lập</span>
+          </div>
+          <div>
+            <strong>7</strong>
+            <span>Thành viên đầu tiên</span>
+          </div>
+          <div>
+            <strong>13+</strong>
+            <span>Đích đến tiếp theo</span>
+          </div>
+        </div>
+
+        <div className="story-timeline-card reveal">
           <div
             className="story-timeline-plot"
             aria-label="Biểu đồ số lượng thành viên EcoBadminton theo thời gian"
@@ -341,7 +374,7 @@ function StoryTimeline() {
                 style={{ left: `${entry.x}%`, top: `${entry.y}%` }}
               >
                 <button
-                  aria-label={`${entry.date}: ${entry.displayCount}${entry.displayCount === "13 + Mads" ? "" : " thành viên"} — ${entry.summary}`}
+                  aria-label={`${entry.date}: ${entry.displayCount}${entry.displayCount === "13+" ? "" : " thành viên"} — ${entry.summary}`}
                   type="button"
                 >
                   <span aria-hidden="true" />
@@ -349,10 +382,15 @@ function StoryTimeline() {
                 <span className="story-timeline-point-count">
                   {entry.displayCount}
                 </span>
+                <span className="story-timeline-point-rail" aria-hidden="true" />
+                <div className="story-timeline-point-info">
+                  <strong>{entry.date}</strong>
+                  <span>{entry.names?.join(" · ") ?? "Đang mở rộng"}</span>
+                </div>
                 <div className="story-timeline-tooltip">
                   <strong>{entry.date}</strong>
                   <span className="story-timeline-tooltip-count">
-                    {entry.displayCount === "13 + Mads"
+                    {entry.displayCount === "13+"
                       ? entry.displayCount
                       : `${entry.displayCount} thành viên`}
                   </span>
@@ -378,12 +416,6 @@ function StoryInvite() {
   return (
     <section className="story-invite-section" aria-labelledby="story-invite-title">
       <div className="section-shell story-invite-inner">
-        <div className="story-invite-heading reveal">
-          <div className="story-invite-tag">Một chỗ cho người mới</div>
-          <p className="story-invite-intro">
-            Ở EcoBadminton chúng mình luôn chào đón các thành viên mới và chắc chắn rằng:
-          </p>
-        </div>
         <div className="story-invite-art reveal reveal-delay">
           <div className="story-invite-art-frame">
             <Image
@@ -409,10 +441,6 @@ function StoryInvite() {
           <p className="story-invite-promise">
             Giờ đây, bạn có thể yên tâm <strong>THAM GIA</strong> cùng chúng mình rồi nè!
           </p>
-          <Link className="button-primary story-invite-button" href="/#rsvp">
-            Tham gia cùng chúng mình <span aria-hidden="true">→</span>
-          </Link>
-          <p className="story-invite-signoff">EcoBadminton - Mãi mãi một tình yêu!</p>
         </div>
       </div>
     </section>
@@ -428,7 +456,8 @@ export function Story() {
         images={STORY_IMAGES.page2}
         label="Lên đường"
         description="Đã tìm thấy bí kíp thất truyền từ thời thượng cổ."
-        context="Chúng mình bắt đầu bằng một lời rủ rất đơn giản: rời màn hình, cầm vợt lên và thử xem một buổi tối có thể vui đến đâu."
+        pretitle="Bạn thấy cuộc sống này quá áp lực? Đâu mới là nơi bạn thuộc về?"
+        showTag={false}
         layout="feature"
         tone="ivory"
         variant="portrait"
@@ -437,7 +466,7 @@ export function Story() {
         images={STORY_IMAGES.page3}
         label="Sẵn sàng"
         description="Luôn trong tâm thế sẵn sàng ra sân."
-        context="Không ai cần đợi đến khi thật giỏi mới bước ra sân. Chỉ cần sẵn sàng, phần còn lại đã có đồng đội."
+        showTag={false}
         arrangement="reverse"
         layout="duo"
         tone="navy"
@@ -447,7 +476,7 @@ export function Story() {
         images={STORY_IMAGES.page4}
         label="Cùng tiến bộ"
         description="Ở EcoBadminton, các newbie không cần lo làm sao trở nên pro vì đã có pro lo."
-        context="Từ những cú phát cầu còn vụng về đến những pha phối hợp ăn ý, mỗi người đều có một người bạn bên cạnh để chỉ dẫn và cổ vũ."
+        context="Từ những cú phát cầu còn vụng về đến những pha phối hợp ăn ý, mỗi người đều có một người bạn bên cạnh để chỉ dẫn, tiếp thêm tự tin và cùng nhau tiến bộ."
         arrangement="stacked"
         layout="collage"
         tone="ivory"
@@ -455,9 +484,9 @@ export function Story() {
       />
       <StoryChapter
         images={STORY_IMAGES.page5}
-        label="Không ngừng ra sân"
+        label="Cách chúng mình hoạt động"
         description="Thật sự thì 2 tuần/buổi vẫn chưa thấm vào đâu so với tinh thần ở EcoBadminton, bạn nghĩ sao nếu chúng mình tăng lên 5 buổi/tuần?"
-        context="Ban đầu là một cuộc hẹn cách tuần. Rồi chẳng ai muốn chờ lâu hơn — vì trên sân luôn có một trận cầu mới, một tiếng cười mới."
+        showTag={true}
         arrangement="stacked"
         layout="strip"
         tone="navy"
@@ -465,7 +494,7 @@ export function Story() {
       />
       <StoryChapter
         images={STORY_IMAGES.page6}
-        label="Đời sống tinh thần"
+        label="Cách chúng mình gắn kết"
         description="Ngoài chăm lo đời sống thể thao, chúng mình còn rất chú trọng đến đời sống tinh thần của các thành viên nữa."
         context="Những bữa tiệc nhỏ, lời chúc bất ngờ và những lần ngồi lại sau trận đấu khiến EcoBadminton trở thành một nhóm người thật sự thuộc về nhau."
         arrangement="reverse"
