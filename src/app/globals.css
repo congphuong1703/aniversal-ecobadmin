@@ -1963,6 +1963,12 @@ button.button-ghost {
   }
 }
 
+@media (min-width: 761px) and (max-width: 1050px) {
+  :root {
+    --home-panel-height: clamp(900px, 105svh, 1040px);
+  }
+}
+
 @media (max-width: 1050px) {
   .hero-content {
     grid-template-columns: 1fr;
