@@ -515,6 +515,11 @@ button.button-ghost {
   line-height: 1.85;
 }
 
+.story-copy h2,
+.achievement-slide-copy h2 {
+  line-height: 0.98;
+}
+
 .achievement-slide-section {
   overflow: hidden;
   background: var(--navy);
