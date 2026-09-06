@@ -33,11 +33,18 @@ type SubmitResponse = {
 };
 
 const MESSAGE_LIMIT = 1000;
-const DECLINE_HOVER_LIMIT = 3;
+const DECLINE_HOVER_LIMIT = 10;
 const DECLINE_OFFSETS = [
-  { x: 72, y: -22 },
-  { x: -72, y: 24 },
-  { x: 54, y: 34 },
+  { x: -104, y: -84 },
+  { x: 112, y: -84 },
+  { x: -144, y: 0 },
+  { x: 144, y: 0 },
+  { x: 0, y: -108 },
+  { x: -112, y: 54 },
+  { x: 112, y: 54 },
+  { x: -84, y: -42 },
+  { x: 84, y: -42 },
+  { x: 0, y: 78 },
 ] as const;
 
 async function readError(response: Response, fallback: string) {
@@ -343,7 +350,7 @@ export function RsvpExperience() {
           </div>
           <div className="message-field">
             <label className="field-label" htmlFor="rsvp-message">
-              Lời nhắn cho EcoBadminton <span>Không bắt buộc</span>
+              Lời nhắn cho EcoBadminton
             </label>
             <textarea
               aria-describedby={
@@ -371,7 +378,7 @@ export function RsvpExperience() {
           <div className="form-actions rsvp-confirm-actions">
             <button
               aria-disabled={!declineUnlocked}
-              className="button-ghost rsvp-decline-button"
+              className="button-primary rsvp-decline-button"
               disabled={isSubmitting}
               style={
                 declineUnlocked
@@ -427,11 +434,6 @@ export function RsvpExperience() {
               </button>
             )}
           </div>
-          {!declineUnlocked ? (
-            <p className="rsvp-decline-hint" aria-live="polite">
-              Hẹn dịp khác sẽ sẵn sàng sau {DECLINE_HOVER_LIMIT - declineHoverCount} lần di chuột.
-            </p>
-          ) : null}
         </div>
       </form>
     );

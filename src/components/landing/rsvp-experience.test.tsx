@@ -117,6 +117,13 @@ describe("RsvpExperience", () => {
     expect(
       screen.getByRole("button", { name: "Hẹn dịp khác" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Hẹn dịp khác" }),
+    ).toHaveClass("button-primary");
+    expect(screen.queryByText("Không bắt buộc")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/sẵn sàng sau .* lần di chuột/i),
+    ).not.toBeInTheDocument();
   });
 
   it("submits an attending response directly from the confirmation popup", async () => {
@@ -163,7 +170,7 @@ describe("RsvpExperience", () => {
     });
   });
 
-  it("moves the decline button three times before enabling it", async () => {
+  it("moves the decline button ten times before enabling it", async () => {
     mockGuestLoad();
     const user = userEvent.setup();
     render(<RsvpExperience />);
@@ -173,8 +180,10 @@ describe("RsvpExperience", () => {
       name: "Hẹn dịp khác",
     });
     expect(declineButton).toHaveAttribute("aria-disabled", "true");
-    fireEvent.mouseEnter(declineButton);
-    fireEvent.mouseEnter(declineButton);
+    for (let index = 0; index < 9; index += 1) {
+      fireEvent.mouseEnter(declineButton);
+    }
+    expect(declineButton).toHaveAttribute("aria-disabled", "true");
     fireEvent.mouseEnter(declineButton);
     expect(declineButton).toHaveAttribute("aria-disabled", "false");
 
@@ -213,9 +222,9 @@ describe("RsvpExperience", () => {
     const declineButton = screen.getByRole("button", {
       name: "Hẹn dịp khác",
     });
-    fireEvent.mouseEnter(declineButton);
-    fireEvent.mouseEnter(declineButton);
-    fireEvent.mouseEnter(declineButton);
+    for (let index = 0; index < 10; index += 1) {
+      fireEvent.mouseEnter(declineButton);
+    }
 
     fetchMock.mockImplementationOnce(() =>
       jsonResponse({

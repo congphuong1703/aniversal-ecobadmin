@@ -1237,14 +1237,6 @@ button.button-ghost {
   transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
-.rsvp-decline-hint {
-  margin: 1rem 0 0;
-  color: var(--navy-muted);
-  font-size: 0.72rem;
-  line-height: 1.5;
-  text-align: right;
-}
-
 .attendance-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
