@@ -180,7 +180,14 @@ describe("RsvpExperience", () => {
       name: "Hẹn dịp khác",
     });
     expect(declineButton).toHaveAttribute("aria-disabled", "true");
-    for (let index = 0; index < 9; index += 1) {
+    expect(declineButton).not.toHaveStyle({
+      transform: "translate(-104px, -84px)",
+    });
+    fireEvent.mouseEnter(declineButton);
+    expect(declineButton).toHaveStyle({
+      transform: "translate(-104px, -84px)",
+    });
+    for (let index = 0; index < 8; index += 1) {
       fireEvent.mouseEnter(declineButton);
     }
     expect(declineButton).toHaveAttribute("aria-disabled", "true");

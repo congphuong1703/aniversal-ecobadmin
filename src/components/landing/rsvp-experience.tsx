@@ -314,8 +314,9 @@ export function RsvpExperience() {
     const failed = step === "failure" && failureContext === "submission";
     const messageLength = [...message].length;
     const declineUnlocked = declineHoverCount >= DECLINE_HOVER_LIMIT;
+    const declineIsMoving = declineHoverCount > 0 && !declineUnlocked;
     const declineOffset = DECLINE_OFFSETS[
-      Math.min(declineHoverCount, DECLINE_HOVER_LIMIT - 1)
+      Math.min(declineHoverCount - 1, DECLINE_HOVER_LIMIT - 1)
     ];
 
     if (!selectedGuest) {
@@ -381,11 +382,11 @@ export function RsvpExperience() {
               className="button-primary rsvp-decline-button"
               disabled={isSubmitting}
               style={
-                declineUnlocked
-                  ? undefined
-                  : {
+                declineIsMoving
+                  ? {
                       transform: `translate(${declineOffset.x}px, ${declineOffset.y}px)`,
                     }
+                  : undefined
               }
               type="button"
               onClick={() => {
