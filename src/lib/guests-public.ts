@@ -1,11 +1,8 @@
 import type { GuestRecord } from "@/data/guests";
 import type { E2eEnvironment } from "@/lib/e2e-mode";
 import { getGuestDirectory } from "@/lib/guest-directory";
-import { maskGuestName } from "@/lib/guest-name";
 
-export type PublicGuest = Omit<GuestRecord, "fullName"> & {
-  maskedName: string;
-};
+export type PublicGuest = GuestRecord;
 
 export function getPublicGuests(
   environment?: E2eEnvironment,
@@ -13,7 +10,7 @@ export function getPublicGuests(
   return getGuestDirectory(environment).map(
     ({ fullName, id, imagePath, imagePosition }) => ({
       id,
-      maskedName: maskGuestName(fullName),
+      fullName,
       imagePath,
       ...(imagePosition ? { imagePosition } : {}),
     }),

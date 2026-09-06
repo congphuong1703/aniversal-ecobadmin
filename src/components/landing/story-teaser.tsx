@@ -14,9 +14,7 @@ export function StoryTeaser() {
           </h2>
           <p>
             EcoBadminton là khoảng sân - nơi chúng mình nạp lại năng lượng sau giờ
-            làm và kết nối với nhau qua những trận cầu đầy kịch tính. Sau một năm,
-            điều đọng lại ở mỗi thành viên không chỉ là kỹ thuật tiến bộ hơn, mà là
-            những khoảng khắc chúng mình đã cùng nhau tạo ra.
+            làm và kết nối với nhau qua những trận cầu đầy kịch tính.
           </p>
           <Link className="button-primary" href="/story">
             Xem câu chuyện <span aria-hidden="true">→</span>

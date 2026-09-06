@@ -31,12 +31,17 @@ export const verifyInputSchema = z
 
 export const rsvpInputSchema = z
   .object({
-    verificationToken: z.string().trim().min(1).max(4096),
+    guestId: z.string().trim().min(1).max(100).optional(),
+    verificationToken: z.string().trim().min(1).max(4096).optional(),
     attending: z.boolean(),
     message: rsvpMessageSchema.nullable().optional().default(null),
     clientSubmissionId: z.uuid(),
   })
-  .strict();
+  .strict()
+  .refine(
+    ({ guestId, verificationToken }) => Boolean(guestId) !== Boolean(verificationToken),
+    "A guest ID or verification token is required.",
+  );
 
 export const loginInputSchema = z
   .object({

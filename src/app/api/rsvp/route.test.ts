@@ -100,6 +100,29 @@ describe("POST /api/rsvp", () => {
     });
   });
 
+  it("accepts a selected guest directly for the invitation flow", async () => {
+    const response = await POST(
+      request({
+        guestId: "guest-07",
+        attending: true,
+        message: "See you there",
+        clientSubmissionId: CLIENT_SUBMISSION_ID,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(verifyVerificationToken).not.toHaveBeenCalled();
+    expect(createSubmissionWithMetadata).toHaveBeenCalledWith(
+      {
+        guestId: "guest-07",
+        attending: true,
+        message: "See you there",
+        clientSubmissionId: CLIENT_SUBMISSION_ID,
+      },
+      "worker-7",
+    );
+  });
+
   it.each(["invalid", "expired"])(
     "rejects an %s verification token",
     async () => {

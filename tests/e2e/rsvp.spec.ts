@@ -6,8 +6,6 @@ import {
 } from "@playwright/test";
 
 const MAP_URL = "https://maps.app.goo.gl/RuNCYdPkAf9K5uS58";
-const E2E_FIRST_GUEST_NAME = "E2E Guest 01";
-const E2E_SECOND_GUEST_NAME = "E2E Guest 02";
 
 function workerScope(projectName: string, workerIndex: number) {
   return `pw-${projectName}-${workerIndex}`;
@@ -50,16 +48,12 @@ async function openRsvp(page: Page) {
   await expectNoHorizontalOverflow(page);
 }
 
-async function verifyFirstGuest(page: Page) {
+async function openConfirmation(page: Page) {
   await openRsvp(page);
   await page.locator(".guest-name-item").first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByLabel("Họ và tên đầy đủ")).toBeFocused();
-  await expectNoHorizontalOverflow(page);
-  await page.getByLabel("Họ và tên đầy đủ").fill(E2E_FIRST_GUEST_NAME);
-  await page.getByRole("button", { name: /Xác minh/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Bạn sẽ tham dự chứ?" }),
+    page.getByRole("heading", { name: "Đúng người, đúng cuộc hẹn." }),
   ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 }
@@ -70,52 +64,28 @@ test.beforeEach(async ({ context, request }, testInfo) => {
   await resetRepository(request, scope);
 });
 
-test("keeps the confirmation flow visible without modal scrolling on a laptop viewport", async ({
+test("keeps the one-popup confirmation flow visible without modal scrolling", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await openRsvp(page);
-  await page.locator(".guest-name-item").first().click();
+  await openConfirmation(page);
   await expectDialogWithoutScroll(page);
-
-  const nameInput = page.getByLabel("Họ và tên đầy đủ");
-  await nameInput.fill("Tên Không Khớp");
-  await page.getByRole("button", { name: /Xác minh/ }).click();
-  await expect(
-    page.getByText("Thông tin chưa khớp với tên đã chọn."),
-  ).toBeVisible();
-  await expectDialogWithoutScroll(page);
-
-  await nameInput.fill(E2E_FIRST_GUEST_NAME);
-  await page.getByRole("button", { name: /Xác minh/ }).click();
-  await expect(
-    page.getByRole("heading", { name: "Bạn sẽ tham dự chứ?" }),
-  ).toBeVisible();
-  await expectDialogWithoutScroll(page);
-
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
-  await expect(
-    page.getByText("Vui lòng chọn tham dự hoặc không tham dự."),
-  ).toBeVisible();
-  await expectDialogWithoutScroll(page);
-
-  await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Cảm ơn bạn." }),
-  ).toBeVisible();
-  await expectDialogWithoutScroll(page);
+  await expect(page.getByLabel("Lời nhắn cho EcoBadminton Không bắt buộc")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tham gia" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hẹn dịp khác" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
 });
 
 test("completes an attending RSVP responsively and opens the approved map", async ({
   page,
 }, testInfo) => {
-  await verifyFirstGuest(page);
-  await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
+  await openConfirmation(page);
   await page
     .getByLabel("Lời nhắn cho EcoBadminton Không bắt buộc")
     .fill("Hẹn gặp cả đội!");
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
+  await page.getByRole("button", { name: "Tham gia" }).click();
 
   await expect(
     page.getByRole("heading", { name: "Cảm ơn bạn." }),
@@ -148,25 +118,19 @@ test("completes an attending RSVP responsively and opens the approved map", asyn
   await expectNoHorizontalOverflow(page);
 });
 
-test("declines without a message and records intentional response history", async ({
+test("declines only after the Hẹn dịp khác button has been hovered three times", async ({
   page,
   request,
 }, testInfo) => {
-  await verifyFirstGuest(page);
-  await page.getByRole("radio", { name: "Không tham dự", exact: true }).check();
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
+  await openConfirmation(page);
+  const declineButton = page.getByRole("button", { name: "Hẹn dịp khác" });
+  await expect(declineButton).toHaveAttribute("aria-disabled", "true");
+  await declineButton.hover();
+  await declineButton.hover();
+  await declineButton.hover();
+  await expect(declineButton).toHaveAttribute("aria-disabled", "false");
+  await declineButton.click();
   await expect(page.getByText(/Tiếc một chút/)).toBeVisible();
-  await expectNoHorizontalOverflow(page);
-
-  await page.getByRole("button", { name: "Gửi phản hồi mới" }).click();
-  await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
-  await page
-    .getByLabel("Lời nhắn cho EcoBadminton Không bắt buộc")
-    .fill("Kế hoạch đã thay đổi");
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Cảm ơn bạn." }),
-  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
@@ -177,38 +141,16 @@ test("declines without a message and records intentional response history", asyn
   const state = (await stateResponse.json()) as {
     submissions: Array<{ attending: boolean; message: string | null }>;
   };
-  expect(state.submissions).toHaveLength(2);
-  expect(state.submissions.map(({ attending }) => attending)).toEqual([
-    false,
-    true,
-  ]);
+  expect(state.submissions).toHaveLength(1);
+  expect(state.submissions[0]?.attending).toBe(false);
   expect(state.submissions[0]?.message).toBeNull();
 });
 
-test("rejects the wrong name and returns focus to the verification field", async ({
-  page,
-}) => {
-  await openRsvp(page);
-  await page.locator(".guest-name-item").first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  const nameInput = page.getByLabel("Họ và tên đầy đủ");
-  await nameInput.fill("Tên Không Khớp");
-  await page.getByRole("button", { name: /Xác minh/ }).click();
-
-  await expect(
-    page.getByText("Thông tin chưa khớp với tên đã chọn."),
-  ).toBeVisible();
-  await expect(nameInput).toBeFocused();
-  await expectNoHorizontalOverflow(page);
-});
-
-test("re-verifies from Back and resumes a lost response with the same submission id", async ({
+test("retries a failed direct response with the same submission id", async ({
   page,
   request,
 }, testInfo) => {
-  await verifyFirstGuest(page);
-  await page.getByRole("radio", { name: "Tham dự", exact: true }).check();
-
+  await openConfirmation(page);
   let droppedResponse = false;
   let originalSubmissionId = "";
   await page.route("**/api/rsvp", async (route) => {
@@ -226,18 +168,12 @@ test("re-verifies from Back and resumes a lost response with the same submission
     await route.continue();
   });
 
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
+  await page.getByRole("button", { name: "Tham gia" }).click();
   await expect(page.getByRole("button", { name: "Thử gửi lại" })).toBeVisible();
-  await expectNoHorizontalOverflow(page);
-  await page.getByRole("button", { name: "Quay lại" }).click();
-  await expect(page.getByLabel("Họ và tên đầy đủ")).toHaveValue(
-    E2E_FIRST_GUEST_NAME,
-  );
-  await page.getByRole("button", { name: /Xác minh/ }).click();
+  await page.getByRole("button", { name: "Thử gửi lại" }).click();
   await expect(
     page.getByRole("heading", { name: "Cảm ơn bạn." }),
   ).toBeVisible();
-  await expectNoHorizontalOverflow(page);
 
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
   const stateResponse = await request.get("/api/test/rsvp-state", {
@@ -250,7 +186,7 @@ test("re-verifies from Back and resumes a lost response with the same submission
   expect(state.submissions[0]?.clientSubmissionId).toBe(originalSubmissionId);
 });
 
-test("supports keyboard name selection, visible focus, validation focus, and reduced motion", async ({
+test("supports keyboard selection, full names, and reduced motion", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -271,19 +207,6 @@ test("supports keyboard name selection, visible focus, validation focus, and red
 
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog")).toBeVisible();
-  const nameInput = page.getByLabel("Họ và tên đầy đủ");
-  await expect(nameInput).toBeFocused();
-  await page.getByRole("button", { name: /Xác minh/ }).click();
-  await expect(nameInput).toBeFocused();
-  await nameInput.fill(E2E_SECOND_GUEST_NAME);
-  await page.getByRole("button", { name: /Xác minh/ }).click();
-
-  await page.getByRole("button", { name: "Gửi phản hồi" }).click();
-  await expect(
-    page.getByRole("radio", { name: "Tham dự", exact: true }),
-  ).toBeFocused();
-  await expect(
-    page.getByText("Vui lòng chọn tham dự hoặc không tham dự."),
-  ).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  await expect(page.getByText("E2E Guest 02")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tham gia" })).toBeVisible();
 });

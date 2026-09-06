@@ -379,6 +379,7 @@ button.button-ghost {
 
 .story-section,
 .story-teaser-section,
+.achievement-slide-section,
 .event-section,
 .anniversary-section,
 .rsvp-section {
@@ -503,6 +504,76 @@ button.button-ghost {
   color: var(--navy-muted);
   font-size: clamp(1rem, 1.35vw, 1.16rem);
   line-height: 1.85;
+}
+
+.achievement-slide-section {
+  overflow: hidden;
+  background: var(--primary);
+  color: var(--white);
+}
+
+.achievement-slide-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.32fr) minmax(0, 1fr);
+  gap: clamp(3rem, 9vw, 9rem);
+  align-items: center;
+}
+
+.achievement-slide-mark {
+  display: grid;
+  width: min(100%, 250px);
+  aspect-ratio: 1;
+  place-content: center;
+  border: 1px solid rgb(255 255 255 / 44%);
+  border-radius: 50%;
+  color: var(--lime);
+  text-align: center;
+}
+
+.achievement-slide-mark strong {
+  font-family: var(--font-display-face), serif;
+  font-size: clamp(4.8rem, 8vw, 8rem);
+  font-weight: 500;
+  letter-spacing: -0.08em;
+  line-height: 0.78;
+}
+
+.achievement-slide-mark span {
+  margin-top: 1rem;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.achievement-slide-copy {
+  max-width: 850px;
+}
+
+.achievement-slide-copy .eyebrow {
+  color: var(--lime);
+}
+
+.achievement-slide-copy h2 {
+  margin: 1.25rem 0 0;
+  font-size: clamp(3rem, 6vw, 6.3rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.88;
+}
+
+.achievement-slide-copy p {
+  max-width: 700px;
+  margin: 2rem 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(1rem, 1.35vw, 1.16rem);
+  line-height: 1.85;
+}
+
+.achievement-slide-copy .achievement-slide-bridge {
+  margin-top: 1rem;
+  color: rgb(255 255 255 / 58%);
 }
 
 .story-groups {
@@ -1139,6 +1210,30 @@ button.button-ghost {
 
 .rsvp-response {
   max-width: 780px;
+}
+
+.rsvp-direct-confirmation {
+  max-width: 980px;
+}
+
+.rsvp-confirm-actions {
+  position: relative;
+  align-items: center;
+  min-height: 54px;
+}
+
+.rsvp-decline-button {
+  position: relative;
+  z-index: 2;
+  transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.rsvp-decline-hint {
+  margin: 1rem 0 0;
+  color: var(--navy-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: right;
 }
 
 .attendance-options {
@@ -2056,15 +2151,18 @@ button.button-ghost {
   }
 
   .story-layout,
+  .achievement-slide-layout,
   .section-heading {
     grid-template-columns: 1fr;
   }
 
-  .story-layout {
+  .story-layout,
+  .achievement-slide-layout {
     gap: 3.5rem;
   }
 
-  .story-stamp {
+  .story-stamp,
+  .achievement-slide-mark {
     width: 145px;
   }
 
@@ -2078,6 +2176,7 @@ button.button-ghost {
   }
 
   .story-copy h2,
+  .achievement-slide-copy h2,
   .event-title h2,
   .anniversary-copy h2,
   .section-heading h2 {

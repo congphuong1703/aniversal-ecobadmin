@@ -1,4 +1,5 @@
 import { Anniversary } from "@/components/landing/anniversary";
+import { AchievementSlide } from "@/components/landing/achievement-slide";
 import { EventDetails } from "@/components/landing/event-details";
 import { Hero } from "@/components/landing/hero";
 import { RsvpExperience } from "@/components/landing/rsvp-experience";
@@ -10,6 +11,7 @@ export default function Home() {
     <main>
       <Hero />
       <StoryTeaser />
+      <AchievementSlide />
       <EventDetails />
       <Anniversary />
       <RsvpExperience />

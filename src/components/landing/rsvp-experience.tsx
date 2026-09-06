@@ -10,13 +10,12 @@ import { Modal } from "@/components/ui/modal";
 
 type ExperienceStep =
   | "selecting"
-  | "verifying"
   | "responding"
   | "submitting"
   | "success"
   | "failure";
 
-type FailureContext = "guests" | "verification" | "submission";
+type FailureContext = "guests" | "submission";
 
 type ApiError = {
   error?: {
@@ -24,11 +23,6 @@ type ApiError = {
     message?: string;
     field?: string;
   };
-};
-
-type VerifyResponse = {
-  verificationToken: string;
-  guest: PublicGuest;
 };
 
 type SubmitResponse = {
@@ -39,6 +33,12 @@ type SubmitResponse = {
 };
 
 const MESSAGE_LIMIT = 1000;
+const DECLINE_HOVER_LIMIT = 3;
+const DECLINE_OFFSETS = [
+  { x: 72, y: -22 },
+  { x: -72, y: 24 },
+  { x: 54, y: 34 },
+] as const;
 
 async function readError(response: Response, fallback: string) {
   try {
@@ -66,26 +66,16 @@ export function RsvpExperience() {
   const [step, setStep] = useState<ExperienceStep>("selecting");
   const [guests, setGuests] = useState<readonly PublicGuest[]>([]);
   const [isLoadingGuests, setIsLoadingGuests] = useState(true);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState("");
-  const [typedName, setTypedName] = useState("");
-  const [verificationToken, setVerificationToken] = useState("");
-  const [attending, setAttending] = useState<boolean | null>(null);
   const [message, setMessage] = useState("");
   const [submittedAttending, setSubmittedAttending] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
-  const [
-    resumeSubmissionAfterVerification,
-    setResumeSubmissionAfterVerification,
-  ] = useState(false);
+  const [declineHoverCount, setDeclineHoverCount] = useState(0);
   const [failureContext, setFailureContext] =
     useState<FailureContext>("guests");
   const [error, setError] = useState("");
-  const [attendanceError, setAttendanceError] = useState("");
   const [status, setStatus] = useState("Đang tải danh sách khách mời…");
 
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const attendingInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   const selectedGuest = useMemo(
@@ -153,9 +143,10 @@ export function RsvpExperience() {
   function selectGuest(guest: PublicGuest) {
     setSelectedGuestId(guest.id);
     setError("");
-    setStep("verifying");
-    setStatus(`Đã chọn ${guest.maskedName}. Hãy xác minh họ tên.`);
-    window.requestAnimationFrame(() => nameInputRef.current?.focus());
+    setMessage("");
+    setDeclineHoverCount(0);
+    setStep("responding");
+    setStatus(`Đã chọn ${guest.fullName}. Bạn có thể xác nhận tham gia.`);
   }
 
   function handleSelectGuestClick(event: React.MouseEvent<HTMLButtonElement>) {
@@ -167,71 +158,11 @@ export function RsvpExperience() {
     }
   }
 
-  async function verifyGuest(event?: FormEvent<HTMLFormElement>) {
-    event?.preventDefault();
-
-    if (isVerifying) {
-      return;
-    }
-
-    if (!selectedGuest || !typedName.trim()) {
-      setError("Vui lòng nhập họ và tên đầy đủ.");
-      nameInputRef.current?.focus();
-      return;
-    }
-
-    setError("");
-    setIsVerifying(true);
-    setStatus("Đang xác minh thông tin khách mời…");
-
-    try {
-      const response = await fetch("/api/rsvp/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ guestId: selectedGuest.id, name: typedName }),
-      });
-
-      if (!response.ok) {
-        const apiError = await readError(
-          response,
-          "Thông tin chưa khớp với tên đã chọn.",
-        );
-        setError(
-          response.status === 400
-            ? "Thông tin chưa khớp với tên đã chọn."
-            : apiError,
-        );
-        setStatus("Xác minh chưa thành công.");
-        window.requestAnimationFrame(() => nameInputRef.current?.focus());
-        return;
-      }
-
-      const body = (await response.json()) as VerifyResponse;
-      setVerificationToken(body.verificationToken);
-
-      if (resumeSubmissionAfterVerification && submissionId) {
-        setResumeSubmissionAfterVerification(false);
-        setStatus("Xác minh thành công. Đang thử lại phản hồi trước đó…");
-        await sendSubmission(submissionId, body.verificationToken);
-      } else {
-        setStep("responding");
-        setStatus("Xác minh thành công. Bạn có thể gửi phản hồi.");
-      }
-    } catch {
-      setFailureContext("verification");
-      setStep("failure");
-      setError("Không thể kết nối để xác minh. Tên bạn nhập vẫn được giữ lại.");
-      setStatus("Mất kết nối trong lúc xác minh.");
-    } finally {
-      setIsVerifying(false);
-    }
-  }
-
   async function sendSubmission(
     clientSubmissionId: string,
-    activeVerificationToken = verificationToken,
+    attendingValue: boolean,
   ) {
-    if (attending === null) {
+    if (!selectedGuestId) {
       return;
     }
 
@@ -244,31 +175,20 @@ export function RsvpExperience() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          verificationToken: activeVerificationToken,
-          attending,
+          guestId: selectedGuestId,
+          attending: attendingValue,
           message: message.trim() || null,
           clientSubmissionId,
         }),
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          setVerificationToken("");
-          setResumeSubmissionAfterVerification(true);
-          setStep("verifying");
-          setError("Phiên xác minh đã hết hạn. Vui lòng xác minh lại họ tên.");
-          setStatus("Phiên xác minh đã hết hạn.");
-          window.requestAnimationFrame(() => nameInputRef.current?.focus());
-          return;
-        }
-
         throw new Error(await readError(response, "Không thể lưu phản hồi."));
       }
 
       const body = (await response.json()) as SubmitResponse;
       setSubmittedAttending(body.submission.attending);
       setSubmissionId(null);
-      setResumeSubmissionAfterVerification(false);
       setStep("success");
       setStatus("Phản hồi đã được ghi nhận. Cảm ơn bạn!");
     } catch {
@@ -281,14 +201,11 @@ export function RsvpExperience() {
     }
   }
 
-  async function submitRsvp(event?: FormEvent<HTMLFormElement>) {
+  async function submitRsvp(
+    event: FormEvent<HTMLFormElement> | undefined,
+    attendingValue: boolean,
+  ) {
     event?.preventDefault();
-
-    if (attending === null) {
-      setAttendanceError("Vui lòng chọn tham dự hoặc không tham dự.");
-      attendingInputRef.current?.focus();
-      return;
-    }
 
     if ([...message].length > MESSAGE_LIMIT) {
       setError("Lời nhắn tối đa 1.000 ký tự.");
@@ -298,13 +215,12 @@ export function RsvpExperience() {
 
     const clientSubmissionId = crypto.randomUUID();
     setSubmissionId(clientSubmissionId);
-    await sendSubmission(clientSubmissionId);
+    await sendSubmission(clientSubmissionId, attendingValue);
   }
 
   function beginChangedSubmission() {
     setError("");
     setSubmissionId(null);
-    setResumeSubmissionAfterVerification(false);
 
     if (step === "failure" && failureContext === "submission") {
       setStep("responding");
@@ -314,13 +230,9 @@ export function RsvpExperience() {
 
   function chooseAnotherGuest() {
     setSelectedGuestId("");
-    setTypedName("");
-    setVerificationToken("");
-    setAttending(null);
-    setAttendanceError("");
     setMessage("");
     setSubmissionId(null);
-    setResumeSubmissionAfterVerification(false);
+    setDeclineHoverCount(0);
     setError("");
     setStep("selecting");
     setStatus("Hãy chọn tên của bạn.");
@@ -353,7 +265,7 @@ export function RsvpExperience() {
     return (
       <div className="rsvp-selection">
         <p className="rsvp-selection-hint">
-          Chọn tên của bạn trong danh sách khách mời để mở phiếu mời.
+          Chọn tên của bạn và xem thư mời.
         </p>
         <ul className="guest-name-list" aria-label="Danh sách khách mời">
           {guests.map((guest, index) => (
@@ -377,7 +289,7 @@ export function RsvpExperience() {
                   <span className="guest-name-index">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <span className="guest-name-text">{guest.maskedName}</span>
+                <span className="guest-name-text">{guest.fullName}</span>
                 </span>
                 <span aria-hidden="true" className="guest-name-arrow">
                   →
@@ -386,109 +298,6 @@ export function RsvpExperience() {
             </li>
           ))}
         </ul>
-        <p className="rsvp-selection-note">
-          Chỉ tên đã che được hiển thị công khai.
-        </p>
-      </div>
-    );
-  }
-
-  function renderVerification() {
-    if (!selectedGuest) {
-      return renderSelecting();
-    }
-
-    const failed = step === "failure" && failureContext === "verification";
-
-    return (
-      <div className="rsvp-panel rsvp-verification">
-        <div className="selected-guest">
-          <Image
-            alt={`Ảnh khách mời ${selectedGuest.maskedName}`}
-            height={500}
-            src={selectedGuest.imagePath}
-            style={{ objectPosition: selectedGuest.imagePosition || "50% 50%" }}
-            width={400}
-          />
-          <div>
-            <span>Khách mời đã chọn</span>
-            <strong>{selectedGuest.maskedName}</strong>
-          </div>
-        </div>
-        <form className="rsvp-form" onSubmit={verifyGuest}>
-          <div>
-            <span className="rsvp-kicker">Bước 02 · Xác nhận</span>
-            <h3 className="font-display">Đúng người, đúng cuộc hẹn.</h3>
-            <p>
-              Nhập họ tên đầy đủ có dấu để chúng mình xác nhận riêng với danh
-              sách nội bộ.
-            </p>
-          </div>
-          <label className="field-label" htmlFor="guest-name">
-            Họ và tên đầy đủ
-          </label>
-          <input
-            aria-describedby={error ? "verification-error" : undefined}
-            autoComplete="name"
-            disabled={isVerifying}
-            id="guest-name"
-            onChange={(event) => {
-              setTypedName(event.target.value);
-              setError("");
-            }}
-            placeholder="Ví dụ: Họ tên của bạn"
-            ref={nameInputRef}
-            type="text"
-            value={typedName}
-          />
-          {error ? (
-            <FormError id="verification-error">{error}</FormError>
-          ) : null}
-          <div className="form-actions">
-            <button
-              className="button-ghost"
-              disabled={isVerifying}
-              type="button"
-              onClick={chooseAnotherGuest}
-            >
-              Chọn lại tên
-            </button>
-            {failed ? (
-              <button
-                className="button-primary"
-                disabled={isVerifying}
-                type="button"
-                onClick={() => void verifyGuest()}
-              >
-                {isVerifying ? (
-                  <>
-                    <span aria-hidden="true" className="button-spinner" />
-                    Đang xác minh…
-                  </>
-                ) : (
-                  "Thử xác minh lại"
-                )}
-              </button>
-            ) : (
-              <button
-                className="button-primary"
-                disabled={isVerifying}
-                type="submit"
-              >
-                {isVerifying ? (
-                  <>
-                    <span aria-hidden="true" className="button-spinner" />
-                    Đang xác minh…
-                  </>
-                ) : (
-                  <>
-                    Xác minh <span aria-hidden="true">→</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </form>
       </div>
     );
   }
@@ -497,133 +306,132 @@ export function RsvpExperience() {
     const isSubmitting = step === "submitting";
     const failed = step === "failure" && failureContext === "submission";
     const messageLength = [...message].length;
+    const declineUnlocked = declineHoverCount >= DECLINE_HOVER_LIMIT;
+    const declineOffset = DECLINE_OFFSETS[
+      Math.min(declineHoverCount, DECLINE_HOVER_LIMIT - 1)
+    ];
+
+    if (!selectedGuest) {
+      return renderSelecting();
+    }
 
     return (
       <form
-        className="rsvp-panel rsvp-response rsvp-form"
-        onSubmit={submitRsvp}
+        className="rsvp-panel rsvp-verification rsvp-direct-confirmation"
+        onSubmit={(event) => void submitRsvp(event, true)}
       >
-        <div>
-          <span className="rsvp-kicker">Bước 03 · Phản hồi</span>
-          <h3 className="font-display">Bạn sẽ tham dự chứ?</h3>
-          <p>
-            Một lựa chọn ngắn thôi — còn những câu chuyện dài, mình để dành cho
-            buổi tiệc.
-          </p>
-        </div>
-        <fieldset
-          aria-describedby={attendanceError ? "attendance-error" : undefined}
-          aria-invalid={attendanceError ? "true" : undefined}
-          className="attendance-options"
-        >
-          <legend>Bạn có tham dự không?</legend>
-          <label>
-            <input
-              aria-label="Tham dự"
-              checked={attending === true}
-              disabled={isSubmitting}
-              name="attending"
-              onChange={() => {
-                setAttending(true);
-                setAttendanceError("");
-                beginChangedSubmission();
-              }}
-              ref={attendingInputRef}
-              type="radio"
-            />
-            <span>
-              <strong>Tham dự</strong>
-              <small>Có mặt và chung vui</small>
-            </span>
-          </label>
-          <label>
-            <input
-              aria-label="Không tham dự"
-              checked={attending === false}
-              disabled={isSubmitting}
-              name="attending"
-              onChange={() => {
-                setAttending(false);
-                setAttendanceError("");
-                beginChangedSubmission();
-              }}
-              type="radio"
-            />
-            <span>
-              <strong>Không tham dự</strong>
-              <small>Hẹn nhau một dịp gần nhất</small>
-            </span>
-          </label>
-        </fieldset>
-        {attendanceError ? (
-          <FormError id="attendance-error">{attendanceError}</FormError>
-        ) : null}
-        <div className="message-field">
-          <label className="field-label" htmlFor="rsvp-message">
-            Lời nhắn cho EcoBadminton <span>Không bắt buộc</span>
-          </label>
-          <textarea
-            aria-describedby={
-              error ? "rsvp-error message-count" : "message-count"
-            }
-            disabled={isSubmitting}
-            id="rsvp-message"
-            onChange={(event) => {
-              setMessage(event.target.value);
-              beginChangedSubmission();
-            }}
-            placeholder="Một kỷ niệm, một lời chúc, hay chỉ một chiếc emoji…"
-            ref={messageInputRef}
-            rows={5}
-            value={message}
+        <div className="selected-guest">
+          <Image
+            alt={`Ảnh khách mời ${selectedGuest.fullName}`}
+            height={500}
+            src={selectedGuest.imagePath}
+            style={{ objectPosition: selectedGuest.imagePosition || "50% 50%" }}
+            width={400}
           />
-          <span
-            className={messageLength > MESSAGE_LIMIT ? "count-over" : ""}
-            id="message-count"
-          >
-            {messageLength.toLocaleString("vi-VN")} / 1.000
-          </span>
+          <div>
+            <span>Khách mời đã chọn</span>
+            <strong>{selectedGuest.fullName}</strong>
+          </div>
         </div>
-        {error ? <FormError id="rsvp-error">{error}</FormError> : null}
-        <div className="form-actions">
-          <button
-            className="button-ghost"
-            disabled={isSubmitting}
-            type="button"
-            onClick={() => {
-              if (failed && submissionId) {
-                setResumeSubmissionAfterVerification(true);
+        <div className="rsvp-form">
+          <div>
+            <h3 className="font-display">Đúng người, đúng cuộc hẹn.</h3>
+            <p>
+              Một lựa chọn ngắn thôi — còn những câu chuyện dài, mình để dành
+              cho buổi tiệc.
+            </p>
+          </div>
+          <div className="message-field">
+            <label className="field-label" htmlFor="rsvp-message">
+              Lời nhắn cho EcoBadminton <span>Không bắt buộc</span>
+            </label>
+            <textarea
+              aria-describedby={
+                error ? "rsvp-error message-count" : "message-count"
               }
-
-              setStep("verifying");
-            }}
-          >
-            Quay lại
-          </button>
-          {failed ? (
-            <button
-              className="button-primary"
-              type="button"
-              onClick={() => submissionId && void sendSubmission(submissionId)}
-            >
-              Thử gửi lại
-            </button>
-          ) : (
-            <button
-              className="button-primary"
               disabled={isSubmitting}
-              type="submit"
+              id="rsvp-message"
+              onChange={(event) => {
+                setMessage(event.target.value);
+                beginChangedSubmission();
+              }}
+              placeholder="Một kỷ niệm, một lời chúc, hay chỉ một chiếc emoji…"
+              ref={messageInputRef}
+              rows={5}
+              value={message}
+            />
+            <span
+              className={messageLength > MESSAGE_LIMIT ? "count-over" : ""}
+              id="message-count"
             >
-              {isSubmitting ? (
-                <>
-                  <span aria-hidden="true" className="button-spinner" />
-                  Đang gửi…
-                </>
-              ) : (
-                "Gửi phản hồi"
-              )}
+              {messageLength.toLocaleString("vi-VN")} / 1.000
+            </span>
+          </div>
+          {error ? <FormError id="rsvp-error">{error}</FormError> : null}
+          <div className="form-actions rsvp-confirm-actions">
+            <button
+              aria-disabled={!declineUnlocked}
+              className="button-ghost rsvp-decline-button"
+              disabled={isSubmitting}
+              style={
+                declineUnlocked
+                  ? undefined
+                  : {
+                      transform: `translate(${declineOffset.x}px, ${declineOffset.y}px)`,
+                    }
+              }
+              type="button"
+              onClick={() => {
+                if (!declineUnlocked) {
+                  setError("Hãy di chuột thêm một chút trước khi hẹn dịp khác.");
+                  return;
+                }
+
+                void submitRsvp(undefined, false);
+              }}
+              onMouseEnter={() => {
+                setDeclineHoverCount((count) =>
+                  Math.min(count + 1, DECLINE_HOVER_LIMIT),
+                );
+              }}
+            >
+              Hẹn dịp khác
             </button>
-          )}
+            {failed ? (
+              <button
+                className="button-primary"
+                disabled={isSubmitting}
+                type="button"
+                onClick={() =>
+                  submissionId
+                    ? void sendSubmission(submissionId, true)
+                    : void submitRsvp(undefined, true)
+                }
+              >
+                Thử gửi lại
+              </button>
+            ) : (
+              <button
+                className="button-primary"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span aria-hidden="true" className="button-spinner" />
+                    Đang gửi…
+                  </>
+                ) : (
+                  "Tham gia"
+                )}
+              </button>
+            )}
+          </div>
+          {!declineUnlocked ? (
+            <p className="rsvp-decline-hint" aria-live="polite">
+              Hẹn dịp khác sẽ sẵn sàng sau {DECLINE_HOVER_LIMIT - declineHoverCount} lần di chuột.
+            </p>
+          ) : null}
         </div>
       </form>
     );
@@ -666,7 +474,6 @@ export function RsvpExperience() {
           type="button"
           onClick={() => {
             setSubmissionId(null);
-            setResumeSubmissionAfterVerification(false);
             setError("");
             setStep("responding");
             setStatus("Bạn có thể gửi một phản hồi mới.");
@@ -680,11 +487,9 @@ export function RsvpExperience() {
 
   const visibleStep =
     step === "failure"
-      ? failureContext === "verification"
-        ? "verifying"
-        : failureContext === "submission"
-          ? "responding"
-          : "selecting"
+      ? failureContext === "submission"
+        ? "responding"
+        : "selecting"
       : step;
 
   return (
@@ -692,14 +497,11 @@ export function RsvpExperience() {
       <div className="section-shell">
         <div className="section-heading reveal">
           <div>
-            <span className="eyebrow">Khách mời</span>
+            <span className="eyebrow">Bữa tiệc sẽ thật trọn vẹn khi có bạn</span>
             <h2 className="font-display" id="rsvp-title">
-              Tấm thiệp mời trên bàn.
+              Tham gia ngay thôi!
             </h2>
           </div>
-          <p>
-            Chọn tên của bạn, xác minh họ tên và để lại phản hồi trước buổi hẹn.
-          </p>
         </div>
         <p className="sr-only" aria-live="polite">
           {status}
@@ -710,15 +512,14 @@ export function RsvpExperience() {
       </div>
       {visibleStep !== "selecting" ? (
         <Modal
-          busy={isVerifying || step === "submitting"}
+          busy={step === "submitting"}
           label={
             selectedGuest
-              ? `Phiếu mời · ${selectedGuest.maskedName}`
-              : "Xác minh khách mời"
+              ? `Xác nhận tham gia · ${selectedGuest.fullName}`
+              : "Xác nhận tham gia"
           }
           onClose={chooseAnotherGuest}
         >
-          {visibleStep === "verifying" ? renderVerification() : null}
           {visibleStep === "responding" || visibleStep === "submitting"
             ? renderResponse()
             : null}

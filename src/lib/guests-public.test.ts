@@ -21,15 +21,12 @@ describe("public guests", () => {
     );
   });
 
-  it("exposes masked names without leaking fixture full names", () => {
+  it("exposes the full names needed by the public invitation list", () => {
     const serializedGuests = JSON.stringify(getPublicGuests());
 
-    expect(serializedGuests.includes("maskedName")).toBe(true);
-    expect(serializedGuests.includes("fullName")).toBe(false);
+    expect(serializedGuests.includes("fullName")).toBe(true);
 
-    for (const fixture of GUEST_FIXTURES) {
-      expect(serializedGuests.includes(fixture.fullName)).toBe(false);
-    }
+    expect(serializedGuests).toContain("Mads Werner");
   });
 
   it("projects the deterministic E2E directory only in explicit memory mode", () => {
@@ -39,11 +36,11 @@ describe("public guests", () => {
     });
     const serializedGuests = JSON.stringify(guests);
 
-    expect(guests[0]?.maskedName).toBe("E2E G**** 0*");
-    expect(guests[1]?.maskedName).toBe("E2E G**** 0*");
+    expect(guests[0]?.fullName).toBe("E2E Guest 01");
+    expect(guests[1]?.fullName).toBe("E2E Guest 02");
 
     for (const guest of E2E_GUESTS) {
-      expect(serializedGuests).not.toContain(guest.fullName);
+      expect(serializedGuests).toContain(guest.fullName);
     }
   });
 

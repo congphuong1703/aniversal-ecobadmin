@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { jsonError, parseJson } from "@/lib/api-response";
 import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
+import { findGuestInActiveDirectory } from "@/lib/guest-directory";
 import { enforceRateLimit, RATE_LIMIT_POLICIES } from "@/lib/rate-limit";
 import {
   createSubmissionWithMetadata,
@@ -31,14 +32,22 @@ export async function POST(request: Request) {
 
   let guestId: string;
 
-  try {
-    guestId = await verifyVerificationToken(parsed.data.verificationToken);
-  } catch {
-    return jsonError(
-      401,
-      "INVALID_VERIFICATION_TOKEN",
-      "Verification is invalid or expired.",
-    );
+  if (parsed.data.guestId) {
+    if (!findGuestInActiveDirectory(parsed.data.guestId)) {
+      return jsonError(400, "UNKNOWN_GUEST", "Guest could not be found.");
+    }
+
+    guestId = parsed.data.guestId;
+  } else {
+    try {
+      guestId = await verifyVerificationToken(parsed.data.verificationToken!);
+    } catch {
+      return jsonError(
+        401,
+        "INVALID_VERIFICATION_TOKEN",
+        "Verification is invalid or expired.",
+      );
+    }
   }
 
   const guestRateLimitResponse = await enforceRateLimit(request, {
