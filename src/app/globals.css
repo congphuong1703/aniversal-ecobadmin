@@ -398,7 +398,7 @@ button.button-ghost {
 
 .story-page-header {
   border-bottom: 1px solid var(--border);
-  background: var(--primary);
+  background: #fff;
 }
 
 .story-page-header-inner {
@@ -411,7 +411,7 @@ button.button-ghost {
 }
 
 .story-page-header-inner .brand-mark {
-  color: var(--white);
+  color: var(--navy);
   font-size: 0.92rem;
   letter-spacing: 0.01em;
 }
@@ -523,7 +523,7 @@ button.button-ghost {
 .achievement-slide-section {
   overflow: hidden;
   background: var(--navy);
-  color: var(--white);
+  color: var(--navy);
 }
 
 .achievement-slide-layout {
@@ -2442,6 +2442,8 @@ button.button-ghost {
 
 .story-journey {
   overflow: clip;
+  background: #fff;
+  color: var(--navy);
 }
 
 .story-journey-hero {
@@ -2558,55 +2560,27 @@ button.button-ghost {
 .story-timeline-section {
   position: relative;
   padding-block: clamp(6rem, 12vw, 11rem);
-  background: var(--primary);
-  color: var(--white);
+  background: #fff;
+  color: var(--navy);
 }
 
-.story-section-lead {
-  max-width: 890px;
-}
-
-.story-kicker,
-.story-chapter-index {
-  display: inline-block;
-  color: var(--lime);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.story-section-lead h2 {
-  max-width: 850px;
-  margin: 1.5rem 0 0;
-  font-size: clamp(3.2rem, 6.2vw, 6.8rem);
-  font-weight: 500;
-  letter-spacing: -0.06em;
-  line-height: 0.88;
-}
-
-.story-section-lead p {
-  max-width: 640px;
-  margin: 2rem 0 0;
-  color: rgb(255 255 255 / 72%);
-  font-size: clamp(1rem, 1.35vw, 1.16rem);
-  line-height: 1.85;
+.story-timeline-intro {
+  max-width: 720px;
+  margin: 0;
+  font-size: clamp(1.45rem, 2.7vw, 2.8rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
 }
 
 .story-timeline-card {
-  margin-top: clamp(4rem, 8vw, 8rem);
-  border-block: 1px solid rgb(255 255 255 / 28%);
-}
-
-.story-timeline-card-top {
-  min-height: 68px;
-  border-bottom: 1px solid rgb(255 255 255 / 22%);
+  margin-top: clamp(3rem, 6vw, 5rem);
+  border-block: 1px solid var(--border);
 }
 
 .story-timeline-plot {
   position: relative;
-  height: clamp(360px, 39vw, 500px);
-  margin-top: 0.7rem;
+  height: clamp(380px, 42vw, 540px);
 }
 
 .story-timeline-plot > svg {
@@ -2619,14 +2593,14 @@ button.button-ghost {
 
 .story-timeline-gridline {
   fill: none;
-  stroke: rgb(255 255 255 / 12%);
+  stroke: rgb(16 33 63 / 12%);
   stroke-width: 1;
   stroke-dasharray: 3 12;
 }
 
 .story-timeline-line {
   fill: none;
-  stroke: url("#timeline-line");
+  stroke: var(--primary);
   stroke-linecap: round;
   stroke-width: 5;
   stroke-dasharray: 1;
@@ -2648,7 +2622,7 @@ button.button-ghost {
   padding: 0;
   border: 1px solid var(--lime);
   border-radius: 50%;
-  background: var(--primary);
+  background: #fff;
   cursor: pointer;
   transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
@@ -2680,8 +2654,8 @@ button.button-ghost {
   width: min(310px, 32vw);
   padding: 1rem 1.1rem;
   border: 1px solid var(--primary);
-  background: var(--white);
-  box-shadow: 10px 10px 0 var(--lime);
+  background: #fff;
+  box-shadow: 0 16px 32px rgb(16 33 63 / 14%);
   color: var(--navy);
   opacity: 0;
   pointer-events: none;
@@ -2723,6 +2697,33 @@ button.button-ghost {
   text-transform: uppercase;
 }
 
+.story-timeline-point-count {
+  position: absolute;
+  bottom: calc(100% + 0.65rem);
+  left: 50%;
+  z-index: 1;
+  padding: 0.15rem 0.35rem;
+  background: #fff;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.story-timeline-point.is-first .story-timeline-point-count {
+  left: 0;
+  transform: none;
+}
+
+.story-timeline-point.is-last .story-timeline-point-count {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
 .story-timeline-tooltip-count {
   display: block;
   margin-top: 0.3rem;
@@ -2752,51 +2753,19 @@ button.button-ghost {
   line-height: 1.4;
 }
 
-.story-timeline-axis {
-  position: absolute;
-  bottom: 0.4rem;
-  color: rgb(255 255 255 / 48%);
-  font-family: var(--font-display-face), serif;
-  font-size: 1.6rem;
-}
-
-.story-timeline-axis-start {
-  left: 0;
-}
-
-.story-timeline-axis-end {
-  right: 0;
-  color: var(--lime);
-}
-
-.story-timeline-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 1.4rem;
-  color: rgb(255 255 255 / 62%);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.story-timeline-footer strong {
-  color: var(--lime);
-}
-
 .story-chapter {
+  border-top: 1px solid var(--border);
   padding-block: clamp(6rem, 12vw, 11rem);
 }
 
 .story-chapter-ivory {
-  background: var(--ivory-soft);
+  background: #fff;
   color: var(--navy);
 }
 
 .story-chapter-navy {
-  background: var(--navy);
-  color: var(--white);
+  background: #fff;
+  color: var(--navy);
 }
 
 .story-chapter-inner {
@@ -2808,19 +2777,16 @@ button.button-ghost {
 
 .story-chapter-heading {
   align-self: start;
-  padding-top: 1.1rem;
+  padding-top: 0.5rem;
 }
 
-.story-chapter-ivory .story-chapter-index {
-  color: var(--primary);
-}
-
-.story-chapter-heading h2 {
-  margin: 1.5rem 0 0;
-  font-size: clamp(3rem, 5.3vw, 6.2rem);
-  font-weight: 500;
-  letter-spacing: -0.06em;
-  line-height: 0.9;
+.story-chapter-description {
+  max-width: 520px;
+  margin: 0;
+  font-size: clamp(1.25rem, 2.1vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
 }
 
 .story-chapter-media {
@@ -2837,8 +2803,8 @@ button.button-ghost {
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border: 1px solid var(--navy);
-  background: var(--navy);
-  box-shadow: 18px 18px 0 var(--primary);
+  background: #fff;
+  box-shadow: 12px 12px 0 rgb(16 33 63 / 10%);
 }
 
 .story-gallery-portrait .story-gallery-frame {
@@ -2849,11 +2815,6 @@ button.button-ghost {
 
 .story-gallery-square .story-gallery-frame {
   aspect-ratio: 1;
-}
-
-.story-chapter-navy .story-gallery-frame {
-  border-color: var(--lime);
-  box-shadow: 18px 18px 0 var(--lime);
 }
 
 .story-gallery-slide {
@@ -2882,33 +2843,8 @@ button.button-ghost {
   position: absolute;
   z-index: 2;
   inset: 1.2rem;
-  border: 1px solid rgb(255 255 255 / 54%);
+  border: 1px solid rgb(255 255 255 / 64%);
   pointer-events: none;
-}
-
-.story-gallery-caption {
-  position: absolute;
-  z-index: 3;
-  right: 1.8rem;
-  bottom: 1.6rem;
-  left: 1.8rem;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--white);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
-.story-gallery-caption span:first-child {
-  color: var(--lime);
-  font-family: var(--font-display-face), serif;
-  font-size: 2rem;
-  font-weight: 500;
-  letter-spacing: -0.04em;
 }
 
 .story-gallery-controls {
@@ -2953,7 +2889,8 @@ button.button-ghost {
 
 .story-invite-section {
   padding-block: clamp(6rem, 12vw, 11rem);
-  background: var(--lime);
+  border-top: 1px solid var(--border);
+  background: #fff;
   color: var(--navy);
 }
 
@@ -2964,26 +2901,28 @@ button.button-ghost {
   align-items: start;
 }
 
-.story-invite-heading h2 {
-  max-width: 790px;
-  margin: 1.5rem 0 0;
-  font-size: clamp(3.2rem, 6.2vw, 6.6rem);
-  font-weight: 500;
-  letter-spacing: -0.06em;
-  line-height: 0.88;
+.story-invite-intro {
+  max-width: 460px;
+  margin: 0;
+  font-size: clamp(1.25rem, 2.1vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
 }
 
 .story-invite-content {
   padding-top: 1.1rem;
-  border-top: 1px solid rgb(16 33 63 / 38%);
+  border-top: 2px solid var(--navy);
 }
 
-.story-invite-label {
+.story-invite-content h2 {
+  max-width: 620px;
   margin: 0;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  color: var(--primary);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
 }
 
 .story-invite-list {
@@ -3001,7 +2940,7 @@ button.button-ghost {
   padding-bottom: 0.7rem;
   border-bottom: 1px solid rgb(16 33 63 / 18%);
   font-family: var(--font-display-face), serif;
-  font-size: clamp(1.4rem, 2.2vw, 2rem);
+  font-size: clamp(1.25rem, 2vw, 1.85rem);
 }
 
 .story-invite-list li::before {
@@ -3063,44 +3002,16 @@ button.button-ghost {
 }
 
 @media (max-width: 760px) {
-  .story-journey-hero {
-    min-height: auto;
-    padding-block: 4rem 4.5rem;
-  }
-
-  .story-journey-meta,
-  .story-timeline-card-top,
-  .story-timeline-footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .story-journey-hero h1 {
-    margin-top: 4.5rem;
-    font-size: clamp(4rem, 19vw, 6.5rem);
-  }
-
-  .story-journey-hero h1 em {
-    margin-left: 0;
-  }
-
-  .story-journey-hero-bottom {
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
-    margin-top: 4.5rem;
-  }
-
   .story-timeline-section,
   .story-chapter,
   .story-invite-section {
     padding-block: 5rem;
   }
 
-  .story-section-lead h2,
-  .story-chapter-heading h2,
-  .story-invite-heading h2 {
-    font-size: clamp(3rem, 14vw, 4.8rem);
-    line-height: 0.93;
+  .story-timeline-intro,
+  .story-chapter-description,
+  .story-invite-intro {
+    font-size: clamp(1.25rem, 5.6vw, 1.75rem);
   }
 
   .story-timeline-card {
@@ -3119,26 +3030,16 @@ button.button-ghost {
     grid-template-columns: 1fr;
   }
 
-  .story-timeline-footer strong {
-    color: var(--lime);
-  }
-
   .story-gallery-frame {
-    box-shadow: 10px 10px 0 var(--primary);
-  }
-
-  .story-chapter-navy .story-gallery-frame {
-    box-shadow: 10px 10px 0 var(--lime);
+    box-shadow: 8px 8px 0 rgb(16 33 63 / 10%);
   }
 
   .story-gallery-frame-line {
     inset: 0.8rem;
   }
 
-  .story-gallery-caption {
-    right: 1.3rem;
-    bottom: 1.1rem;
-    left: 1.3rem;
+  .story-timeline-point-count {
+    font-size: 0.68rem;
   }
 }
 

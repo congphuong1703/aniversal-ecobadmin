@@ -16,7 +16,7 @@ type StoryGalleryProps = {
   variant?: "portrait" | "landscape" | "square";
 };
 
-const ROTATION_MS = 4200;
+const ROTATION_MS = 2000;
 
 export function StoryGallery({
   images,
@@ -67,10 +67,6 @@ export function StoryGallery({
           </figure>
         ))}
         <div className="story-gallery-frame-line" aria-hidden="true" />
-        <div className="story-gallery-caption" aria-live="polite">
-          <span>{String(activeIndex + 1).padStart(2, "0")}</span>
-          <span>{label}</span>
-        </div>
       </div>
 
       {images.length > 1 ? (
