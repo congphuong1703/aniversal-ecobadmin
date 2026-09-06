@@ -25,6 +25,7 @@
   --border: #c8c0b2;
   --white: #fffdf8;
   --shadow: 0 24px 80px rgb(16 33 63 / 10%);
+  --home-panel-height: clamp(780px, 78svh, 860px);
 }
 
 * {
@@ -385,6 +386,14 @@ button.button-ghost {
 .rsvp-section {
   position: relative;
   padding-block: clamp(90px, 12vw, 170px);
+}
+
+.story-teaser-section,
+.achievement-slide-section,
+.event-section {
+  min-height: var(--home-panel-height);
+  display: flex;
+  align-items: center;
 }
 
 .story-page-header {
@@ -2159,6 +2168,13 @@ button.button-ghost {
   .story-layout,
   .achievement-slide-layout {
     gap: 3.5rem;
+  }
+
+  .story-teaser-section,
+  .achievement-slide-section,
+  .event-section {
+    min-height: 0;
+    display: block;
   }
 
   .story-stamp,
