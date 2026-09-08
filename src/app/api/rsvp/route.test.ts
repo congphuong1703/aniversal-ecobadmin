@@ -135,7 +135,7 @@ describe("POST /api/rsvp", () => {
     expect(ensureLuckyNumberAssignment).not.toHaveBeenCalled();
   });
 
-  it("accepts a selected guest directly for the invitation flow", async () => {
+  it("submits a selected guest directly without exposing lucky numbers", async () => {
     const response = await POST(
       request({
         guestId: "guest-07",
@@ -146,7 +146,16 @@ describe("POST /api/rsvp", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      submission: SUBMISSION,
+      deduplicated: false,
+      luckyNumbers: null,
+    });
     expect(verifyVerificationToken).not.toHaveBeenCalled();
+    expect(ensureLuckyNumberAssignment).toHaveBeenCalledWith(
+      "guest-07",
+      "worker-7",
+    );
     expect(createSubmissionWithMetadata).toHaveBeenCalledWith(
       {
         guestId: "guest-07",

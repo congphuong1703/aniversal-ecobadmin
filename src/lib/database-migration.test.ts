@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 
 let migration = "";
+let luckyNumberMigration = "";
 
 describe("Supabase migration", () => {
   beforeAll(async () => {
@@ -13,6 +14,15 @@ describe("Supabase migration", () => {
       fileURLToPath(
         new URL(
           "../../supabase/migrations/202607290001_create_rsvp_submissions.sql",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    luckyNumberMigration = await readFile(
+      fileURLToPath(
+        new URL(
+          "../../supabase/migrations/202609080001_create_lucky_number_tables.sql",
           import.meta.url,
         ),
       ),
@@ -49,6 +59,12 @@ describe("Supabase migration", () => {
     );
     expect(migration).toMatch(
       /grant execute on function public\.consume_rate_limit_bucket\(text, integer, integer\) to service_role/i,
+    );
+  });
+
+  it("requires lucky number assignments to use a one-based five-element vector", () => {
+    expect(luckyNumberMigration).toMatch(
+      /constraint lucky_number_assignments_array_shape check \(\s*array_ndims\(numbers\) = 1\s*and array_lower\(numbers, 1\) = 1\s*and array_upper\(numbers, 1\) = 5\s*\),/i,
     );
   });
 });

@@ -2,6 +2,11 @@ create table if not exists public.lucky_number_assignments (
   guest_id text primary key,
   numbers smallint[] not null,
   created_at timestamptz not null default now(),
+  constraint lucky_number_assignments_array_shape check (
+    array_ndims(numbers) = 1
+    and array_lower(numbers, 1) = 1
+    and array_upper(numbers, 1) = 5
+  ),
   constraint lucky_number_assignments_five_numbers check (cardinality(numbers) = 5),
   constraint lucky_number_assignments_number_range check (
     numbers <@ array[

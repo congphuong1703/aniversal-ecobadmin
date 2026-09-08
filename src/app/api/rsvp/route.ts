@@ -32,6 +32,7 @@ export async function POST(request: Request) {
   }
 
   let guestId: string;
+  let verifiedTokenPath = false;
 
   if (parsed.data.guestId) {
     if (!findGuestInActiveDirectory(parsed.data.guestId)) {
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
 
     guestId = parsed.data.guestId;
   } else {
+    verifiedTokenPath = true;
     try {
       guestId = await verifyVerificationToken(parsed.data.verificationToken!);
     } catch {
@@ -76,7 +78,10 @@ export async function POST(request: Request) {
       ? await ensureLuckyNumberAssignment(guestId, e2eScope)
       : null;
 
-    return NextResponse.json({ ...result, luckyNumbers });
+    return NextResponse.json({
+      ...result,
+      luckyNumbers: verifiedTokenPath ? luckyNumbers : null,
+    });
   } catch (error) {
     if (error instanceof SubmissionIdConflictError) {
       return jsonError(
