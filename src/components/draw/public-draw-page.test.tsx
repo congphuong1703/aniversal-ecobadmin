@@ -93,12 +93,21 @@ describe("PublicDrawPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders all five pending prizes and their reward details", async () => {
+  it("renders information sections, pending prizes, and reward details", async () => {
     fetchMock.mockImplementationOnce(() => jsonResponse(PENDING_DRAWS));
 
     render(<PublicDrawPage />);
 
     expect(await screen.findByRole("heading", { name: "Quay trúng thưởng" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Điều hướng quay thưởng" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Thể lệ" })).toHaveAttribute("href", "#the-le");
+    expect(screen.getByRole("link", { name: "Giải thưởng" })).toHaveAttribute("href", "#giai-thuong");
+    expect(screen.getByRole("link", { name: "Kết quả" })).toHaveAttribute("href", "#ket-qua");
+    expect(screen.getByRole("heading", { name: "Thể lệ tham gia" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Giải thưởng" })).toBeInTheDocument();
+    expect(screen.getByText("Đã mở 0/5 giải")).toBeInTheDocument();
+    expect(screen.getByText(/admin là người duy nhất được quay/i)).toBeInTheDocument();
+    expect(screen.getByText(/tất cả khách có cùng số trúng/i)).toBeInTheDocument();
     expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
     expect(screen.getByText("Quà tặng đặc biệt · Nội dung sẽ cập nhật")).toBeInTheDocument();
     expect(screen.getByText("Voucher mua sắm · Demo")).toBeInTheDocument();

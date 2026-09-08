@@ -17,9 +17,14 @@ export default function PublicDrawRoute() {
             <span>Eco</span>
             <strong>Badminton</strong>
           </Link>
-          <Link className="story-page-back" href="/#top">
-            <span aria-hidden="true">←</span> Về trang chính
-          </Link>
+          <nav className="hero-nav-links" aria-label="Điều hướng chính">
+            <Link className="story-page-back" href="/quay-trung-thuong" aria-current="page">
+              Quay trúng thưởng
+            </Link>
+            <Link className="story-page-back" href="/#top">
+              <span aria-hidden="true">←</span> Về trang chính
+            </Link>
+          </nav>
         </div>
       </header>
       <PublicDrawPage />

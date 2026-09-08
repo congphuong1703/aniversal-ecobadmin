@@ -12,7 +12,7 @@ export function Hero() {
           <a className="nav-story" href="/story?from=page1">
             Biết thêm về chúng mình
           </a>
-          <a className="nav-story" href="/quay-trung-thuong">
+          <a className="nav-story" href="/quay-trung-thuong" aria-label="Quay trúng thưởng">
             Quay trúng thưởng
           </a>
           <a className="nav-rsvp" href="#rsvp">Xác nhận tham dự <span aria-hidden="true">↘</span></a>
