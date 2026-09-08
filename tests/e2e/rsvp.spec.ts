@@ -78,6 +78,17 @@ test("keeps the one-popup confirmation flow visible without modal scrolling", as
   );
 });
 
+test("keeps the hero navigation inside the mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.getByRole("link", { name: "Quay trúng thưởng" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  expect(
+    await page.locator(".hero-nav").evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeGreaterThan(72);
+});
+
 test("completes an attending RSVP responsively and opens the approved map", async ({
   page,
 }, testInfo) => {
@@ -90,6 +101,11 @@ test("completes an attending RSVP responsively and opens the approved map", asyn
   await expect(
     page.getByRole("heading", { name: "Cảm ơn bạn." }),
   ).toBeVisible();
+  const luckyNumbers = page.locator(".lucky-number-circle");
+  await expect(luckyNumbers).toHaveCount(5);
+  const luckyNumberValues = await luckyNumbers.allTextContents();
+  expect(new Set(luckyNumberValues).size).toBe(5);
+  expect(luckyNumberValues.every((value) => /^\d{2}$/.test(value))).toBe(true);
   const mapLink = page.getByRole("link", { name: /Mở Google Maps/ });
   await expect(mapLink).toHaveAttribute("href", MAP_URL);
   await expect(mapLink).toHaveAttribute("target", "_blank");
