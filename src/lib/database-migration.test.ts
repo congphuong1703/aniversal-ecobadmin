@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 let migration = "";
 let luckyNumberMigration = "";
 let luckyDrawMigration = "";
+let randomizedLuckyDrawMigration = "";
 
 describe("Supabase migration", () => {
   beforeAll(async () => {
@@ -33,6 +34,15 @@ describe("Supabase migration", () => {
       fileURLToPath(
         new URL(
           "../../supabase/migrations/202609080002_add_atomic_lucky_draw_function.sql",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    randomizedLuckyDrawMigration = await readFile(
+      fileURLToPath(
+        new URL(
+          "../../supabase/migrations/202609080003_randomize_lucky_prize_order.sql",
           import.meta.url,
         ),
       ),
@@ -84,5 +94,17 @@ describe("Supabase migration", () => {
     );
     expect(luckyDrawMigration).toMatch(/select u\.number::smallint as number/i);
     expect(luckyDrawMigration).toMatch(/group by u\.number/i);
+  });
+
+  it("randomizes the next pending prize rank", () => {
+    expect(randomizedLuckyDrawMigration).toMatch(
+      /where not exists \([\s\S]*result\.prize_rank = candidate\.rank[\s\S]*order by random\(\)/i,
+    );
+    expect(randomizedLuckyDrawMigration).toMatch(
+      /create or replace function public\.draw_next_lucky_prize\(\)/i,
+    );
+    expect(randomizedLuckyDrawMigration).toMatch(
+      /grant execute on function public\.draw_next_lucky_prize\(\) to service_role/i,
+    );
   });
 });
