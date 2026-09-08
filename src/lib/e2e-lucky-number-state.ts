@@ -5,9 +5,15 @@ import type {
   LuckyNumberAssignmentRow,
   LuckyNumberPersistenceAdapter,
 } from "@/lib/lucky-number-repository";
+import type {
+  LuckyDrawPersistenceAdapter,
+  LuckyDrawResultRow,
+} from "@/lib/lucky-draw-repository";
 
 type MemoryStore = {
   rows: LuckyNumberAssignmentRow[];
+  drawRows: LuckyDrawResultRow[];
+  drawLock: Promise<void>;
 };
 
 const E2E_STORES_KEY = "__ecobadmintonE2eLuckyNumberStores";
@@ -27,7 +33,7 @@ function getStore(scope: string) {
   let store = allStores.get(scope);
 
   if (!store) {
-    store = { rows: [] };
+    store = { rows: [], drawRows: [], drawLock: Promise.resolve() };
     allStores.set(scope, store);
   }
 
@@ -35,7 +41,11 @@ function getStore(scope: string) {
 }
 
 export function resetE2eLuckyNumberState(scope: string) {
-  stores().set(scope, { rows: [] });
+  stores().set(scope, {
+    rows: [],
+    drawRows: [],
+    drawLock: Promise.resolve(),
+  });
 }
 
 export async function getE2eLuckyNumberState(scope: string) {
@@ -68,6 +78,58 @@ export function getE2eLuckyNumberPersistence(
 
     async listAssignments() {
       return getE2eLuckyNumberState(scope);
+    },
+  };
+}
+
+export function getE2eLuckyDrawPersistence(
+  scope: string,
+): LuckyDrawPersistenceAdapter {
+  return {
+    async listAssignments() {
+      return getE2eLuckyNumberState(scope);
+    },
+
+    async listResults() {
+      return [...getStore(scope).drawRows];
+    },
+
+    async insertResult(input) {
+      const store = getStore(scope);
+      const duplicate = store.drawRows.some(
+        (row) =>
+          row.prize_rank === input.prize_rank ||
+          row.winning_number === input.winning_number,
+      );
+
+      if (duplicate) {
+        throw Object.assign(new Error("duplicate draw result"), {
+          code: "23505",
+        });
+      }
+
+      const row: LuckyDrawResultRow = {
+        ...input,
+        created_at: new Date().toISOString(),
+      };
+      store.drawRows.push(row);
+      return row;
+    },
+
+    async withDrawLock<T>(operation: () => Promise<T>) {
+      const store = getStore(scope);
+      const previous = store.drawLock;
+      let release!: () => void;
+      store.drawLock = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      await previous;
+      try {
+        return await operation();
+      } finally {
+        release();
+      }
     },
   };
 }
