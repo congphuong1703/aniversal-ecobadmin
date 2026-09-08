@@ -261,6 +261,73 @@ describe("RSVP repository", () => {
     });
   });
 
+  it("adds attending lucky numbers and every matching won prize to admin rows", async () => {
+    const memory = createMemoryAdapter([
+      makeRow(
+        {
+          guest_id: "guest-01",
+          attending: true,
+          message: null,
+          client_submission_id: "21000000-0000-4000-8000-000000000001",
+        },
+        {
+          id: "31000000-0000-4000-8000-000000000001",
+          created_at: "2026-07-29T01:00:00.000Z",
+        },
+      ),
+    ]);
+    const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES, {
+      async listAssignments() {
+        return [
+          {
+            guest_id: "guest-01",
+            numbers: [1, 12, 22, 53, 52],
+            created_at: "2026-07-29T00:00:00.000Z",
+          },
+        ];
+      },
+      async getState() {
+        return {
+          draws: [
+            {
+              prizeRank: 1,
+              prizeKey: "special",
+              label: "Giải đặc biệt",
+              result: {
+                prizeRank: 1,
+                prizeKey: "special",
+                label: "Giải đặc biệt",
+                winningNumber: 1,
+                winners: ["Nguyễn Văn An"],
+                createdAt: "2026-07-29T02:00:00.000Z",
+              },
+            },
+            {
+              prizeRank: 2,
+              prizeKey: "second",
+              label: "Giải nhì",
+              result: {
+                prizeRank: 2,
+                prizeKey: "second",
+                label: "Giải nhì",
+                winningNumber: 12,
+                winners: ["Nguyễn Văn An"],
+                createdAt: "2026-07-29T03:00:00.000Z",
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    const guest = (await repository.getAdminDashboard()).guests.find(
+      ({ id }) => id === "guest-01",
+    );
+
+    expect(guest?.luckyNumbers).toEqual([1, 12, 22, 53, 52]);
+    expect(guest?.wonPrizes).toEqual(["Giải đặc biệt", "Giải nhì"]);
+  });
+
   it("uses the submission id as a deterministic tie-breaker", async () => {
     const createdAt = "2026-07-29T04:00:00.000Z";
     const memory = createMemoryAdapter([

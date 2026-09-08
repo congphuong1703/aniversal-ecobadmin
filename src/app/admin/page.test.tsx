@@ -32,6 +32,8 @@ const DASHBOARD = {
       id: "guest-01",
       fullName: "Nguyễn Văn An",
       imagePath: "/guests/guest-01.svg",
+      luckyNumbers: null,
+      wonPrizes: [],
       currentSubmission: null,
       history: [],
     },

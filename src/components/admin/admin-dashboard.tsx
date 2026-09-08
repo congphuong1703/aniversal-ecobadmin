@@ -5,6 +5,8 @@ import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { ADMIN_SESSION_MAX_REMAINING_MS } from "@/lib/admin-session-contract";
+import type { LuckyDrawState } from "@/lib/lucky-draw-repository";
+import { formatLuckyNumber } from "@/lib/lucky-number-format";
 import type {
   AdminGuestRow,
   DashboardSummary,
@@ -15,6 +17,9 @@ type DashboardData = {
   summary: DashboardSummary;
   guests: AdminGuestRow[];
 };
+
+type ResponseFilter = "all" | "attending" | "declined" | "pending";
+type WinnerFilter = "all" | "winner" | "not-winner";
 
 type ConfirmedSession = {
   remainingMs: number;
@@ -64,6 +69,14 @@ function responseClass(submission: RsvpSubmission | null) {
   }
 
   return submission.attending ? "is-attending" : "is-declined";
+}
+
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("vi-VN")
+    .trim();
 }
 
 function isSubmission(value: unknown): value is RsvpSubmission {
@@ -119,7 +132,54 @@ function isAdminGuestRow(value: unknown): value is AdminGuestRow {
       isSubmission(value.currentSubmission)) &&
     "history" in value &&
     Array.isArray(value.history) &&
-    value.history.every(isSubmission)
+    value.history.every(isSubmission) &&
+    "luckyNumbers" in value &&
+    (value.luckyNumbers === null ||
+      (Array.isArray(value.luckyNumbers) &&
+        value.luckyNumbers.length === 5 &&
+        value.luckyNumbers.every(
+          (number) =>
+            typeof number === "number" &&
+            Number.isInteger(number) &&
+            number >= 0 &&
+            number <= 99,
+        ))) &&
+    "wonPrizes" in value &&
+    Array.isArray(value.wonPrizes) &&
+    value.wonPrizes.every((prize) => typeof prize === "string")
+  );
+}
+
+function isLuckyDrawState(value: unknown): value is LuckyDrawState {
+  if (typeof value !== "object" || value === null || !("draws" in value)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value.draws) &&
+    value.draws.every((draw) => {
+      if (
+        typeof draw !== "object" ||
+        draw === null ||
+        !("prizeRank" in draw) ||
+        !Number.isInteger(draw.prizeRank) ||
+        !("label" in draw) ||
+        typeof draw.label !== "string" ||
+        !("result" in draw)
+      ) {
+        return false;
+      }
+
+      return (
+        draw.result === null ||
+        (typeof draw.result === "object" &&
+          draw.result !== null &&
+          "winningNumber" in draw.result &&
+          typeof draw.result.winningNumber === "number" &&
+          "winners" in draw.result &&
+          Array.isArray(draw.result.winners))
+      );
+    })
   );
 }
 
@@ -197,9 +257,16 @@ export function AdminDashboard() {
   const sessionStateRef = useRef<SessionState>("checking");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const dashboardRef = useRef<DashboardData | null>(null);
+  const [drawState, setDrawState] = useState<LuckyDrawState | null>(null);
+  const [drawError, setDrawError] = useState("");
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [responseFilter, setResponseFilter] = useState<ResponseFilter>("all");
+  const [winnerFilter, setWinnerFilter] = useState<WinnerFilter>("all");
   const expiryTimerRef = useRef<number | undefined>(undefined);
   const confirmationTimerRef = useRef<number | undefined>(undefined);
   const confirmationAbortRef = useRef<AbortController | null>(null);
+  const drawLoadTimerRef = useRef<number | undefined>(undefined);
   const monotonicDeadlineRef = useRef<number | null>(null);
   const wallDeadlineRef = useRef<number | null>(null);
   const confirmationRequestRef = useRef(0);
@@ -235,12 +302,18 @@ export function AdminDashboard() {
       confirmationInFlightRef.current = false;
       confirmationAbortRef.current?.abort();
       confirmationAbortRef.current = null;
+      if (drawLoadTimerRef.current !== undefined) {
+        window.clearTimeout(drawLoadTimerRef.current);
+        drawLoadTimerRef.current = undefined;
+      }
       monotonicDeadlineRef.current = null;
       wallDeadlineRef.current = null;
       dashboardRef.current = null;
       clearConfirmationTimer();
       clearExpiryTimer();
       setDashboard(null);
+      setDrawState(null);
+      setDrawError("");
       setSessionState(reason);
     },
     [clearConfirmationTimer, clearExpiryTimer],
@@ -256,12 +329,86 @@ export function AdminDashboard() {
     confirmationInFlightRef.current = false;
     confirmationAbortRef.current?.abort();
     confirmationAbortRef.current = null;
+    if (drawLoadTimerRef.current !== undefined) {
+      window.clearTimeout(drawLoadTimerRef.current);
+      drawLoadTimerRef.current = undefined;
+    }
     monotonicDeadlineRef.current = null;
     wallDeadlineRef.current = null;
     clearConfirmationTimer();
     clearExpiryTimer();
     flushSync(() => setSessionState("checking"));
   }, [clearConfirmationTimer, clearExpiryTimer]);
+
+  const loadDrawState = useCallback(async () => {
+    const response = await fetch("/api/admin/draws", { cache: "no-store" });
+
+    if (response.status === 401) {
+      clearPrivateDashboard("expiry");
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error("Unable to load draws.");
+    }
+
+    const body: unknown = await response.json();
+
+    if (!isLuckyDrawState(body)) {
+      throw new Error("Malformed draw state.");
+    }
+
+    setDrawState(body);
+    setDrawError("");
+  }, [clearPrivateDashboard]);
+
+  const scheduleDrawStateLoad = useCallback(() => {
+    if (drawLoadTimerRef.current !== undefined) {
+      return;
+    }
+
+    drawLoadTimerRef.current = window.setTimeout(() => {
+      drawLoadTimerRef.current = undefined;
+      void loadDrawState().catch(() => {
+        setDrawError("Không thể tải trạng thái quay thưởng.");
+      });
+    }, 100);
+  }, [loadDrawState]);
+
+  const refreshDashboardAndDraws = useCallback(async () => {
+    const [dashboardResponse, drawsResponse] = await Promise.all([
+      fetch("/api/admin/dashboard", { cache: "no-store" }),
+      fetch("/api/admin/draws", { cache: "no-store" }),
+    ]);
+
+    if (dashboardResponse.status === 401 || drawsResponse.status === 401) {
+      clearPrivateDashboard("expiry");
+      return;
+    }
+
+    if (!dashboardResponse.ok || !drawsResponse.ok) {
+      throw new Error("Unable to refresh dashboard.");
+    }
+
+    const dashboardConfirmation = confirmedSession(
+      await dashboardResponse.json(),
+      true,
+    );
+    const drawsBody: unknown = await drawsResponse.json();
+
+    if (
+      dashboardConfirmation === null ||
+      dashboardConfirmation.dashboard === null ||
+      !isLuckyDrawState(drawsBody)
+    ) {
+      throw new Error("Malformed dashboard response.");
+    }
+
+    dashboardRef.current = dashboardConfirmation.dashboard;
+    setDashboard(dashboardConfirmation.dashboard);
+    setDrawState(drawsBody);
+    setDrawError("");
+  }, [clearPrivateDashboard]);
 
   const requestSessionConfirmation = useCallback(
     async () => {
@@ -345,6 +492,7 @@ export function AdminDashboard() {
         if (confirmation.dashboard) {
           dashboardRef.current = confirmation.dashboard;
           setDashboard(confirmation.dashboard);
+          scheduleDrawStateLoad();
         }
         sessionStateRef.current = "active";
         setSessionState("active");
@@ -363,7 +511,11 @@ export function AdminDashboard() {
         }
       }
     },
-    [clearConfirmationTimer, clearPrivateDashboard],
+    [
+      clearConfirmationTimer,
+      clearPrivateDashboard,
+      scheduleDrawStateLoad,
+    ],
   );
 
   const confirmSessionAfterResume = useCallback(() => {
@@ -425,6 +577,10 @@ export function AdminDashboard() {
       confirmationInFlightRef.current = false;
       confirmationAbortRef.current?.abort();
       confirmationAbortRef.current = null;
+      if (drawLoadTimerRef.current !== undefined) {
+        window.clearTimeout(drawLoadTimerRef.current);
+        drawLoadTimerRef.current = undefined;
+      }
       clearConfirmationTimer();
       clearExpiryTimer();
       window.removeEventListener("focus", confirmAfterFocus);
@@ -538,6 +694,47 @@ export function AdminDashboard() {
     }
   }
 
+  async function drawNextPrize() {
+    if (isDrawing) {
+      return;
+    }
+
+    setIsDrawing(true);
+    setDrawError("");
+
+    try {
+      const response = await fetch("/api/admin/draws/next", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      });
+
+      if (response.status === 401) {
+        clearPrivateDashboard("expiry");
+        return;
+      }
+
+      if (response.status === 409) {
+        const body = (await response.json()) as {
+          error?: { message?: string };
+        };
+        setDrawError(
+          body.error?.message ?? "Chưa có số phù hợp để quay giải tiếp theo.",
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to draw next prize.");
+      }
+
+      await refreshDashboardAndDraws();
+    } catch {
+      setDrawError("Không thể cập nhật kết quả quay. Vui lòng thử lại.");
+    } finally {
+      setIsDrawing(false);
+    }
+  }
+
   if (sessionState === "checking") {
     return <AdminSessionChecking />;
   }
@@ -547,6 +744,28 @@ export function AdminDashboard() {
   }
 
   const { summary, guests } = dashboard;
+  const normalizedSearch = normalizeSearch(search);
+  const filteredGuests = guests.filter((guest) => {
+    const numberText =
+      guest.luckyNumbers?.map((number) => formatLuckyNumber(number)).join(" ") ??
+      "";
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      normalizeSearch(guest.fullName).includes(normalizedSearch) ||
+      normalizeSearch(numberText).includes(normalizedSearch);
+    const matchesResponse =
+      responseFilter === "all" ||
+      (responseFilter === "attending" && guest.currentSubmission?.attending) ||
+      (responseFilter === "declined" && guest.currentSubmission?.attending === false) ||
+      (responseFilter === "pending" && guest.currentSubmission === null);
+    const matchesWinner =
+      winnerFilter === "all" ||
+      (winnerFilter === "winner" && guest.wonPrizes.length > 0) ||
+      (winnerFilter === "not-winner" && guest.wonPrizes.length === 0);
+
+    return matchesSearch && matchesResponse && matchesWinner;
+  });
+  const nextDraw = drawState?.draws.find((draw) => draw.result === null) ?? null;
   const metrics = [
     { label: "Tổng khách", value: summary.total, tone: "total" },
     { label: "Tham dự", value: summary.attending, tone: "attending" },
@@ -626,6 +845,86 @@ export function AdminDashboard() {
             <p>{summary.total} khách mời</p>
           </div>
 
+          <div className="admin-filters" aria-label="Bộ lọc khách mời">
+            <label>
+              Tìm theo tên hoặc số
+              <input
+                aria-label="Tìm theo tên hoặc số"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Ví dụ: 01 hoặc Nguyễn An"
+                type="text"
+                value={search}
+              />
+            </label>
+            <label>
+              Lọc trạng thái phản hồi
+              <select
+                aria-label="Lọc trạng thái phản hồi"
+                onChange={(event) =>
+                  setResponseFilter(event.target.value as ResponseFilter)
+                }
+                value={responseFilter}
+              >
+                <option value="all">Tất cả</option>
+                <option value="attending">Tham dự</option>
+                <option value="declined">Không tham dự</option>
+                <option value="pending">Chưa phản hồi</option>
+              </select>
+            </label>
+            <label>
+              Lọc người trúng giải
+              <select
+                aria-label="Lọc người trúng giải"
+                onChange={(event) =>
+                  setWinnerFilter(event.target.value as WinnerFilter)
+                }
+                value={winnerFilter}
+              >
+                <option value="all">Tất cả</option>
+                <option value="winner">Đã trúng giải</option>
+                <option value="not-winner">Chưa trúng giải</option>
+              </select>
+            </label>
+          </div>
+
+          <section className="admin-draw-panel" aria-labelledby="admin-draw-title">
+            <div>
+              <span className="eyebrow">Điều khiển quay thưởng</span>
+              <h3 className="font-display" id="admin-draw-title">
+                {nextDraw ? nextDraw.label : "Đã hoàn tất năm lượt quay"}
+              </h3>
+              <p>
+                {nextDraw
+                  ? "Hệ thống tự chọn số hợp lệ tiếp theo theo giới hạn người sở hữu."
+                  : "Tất cả kết quả đã được mở cho khách mời theo dõi."}
+              </p>
+            </div>
+            <button
+              className="button-primary"
+              disabled={!nextDraw || isDrawing}
+              onClick={() => void drawNextPrize()}
+              type="button"
+            >
+              {isDrawing ? "Đang quay…" : nextDraw ? `Quay ${nextDraw.label.toLowerCase()}` : "Đã hoàn tất"}
+            </button>
+            {drawError ? <p className="admin-draw-error" role="alert">{drawError}</p> : null}
+            {drawState?.draws.some((draw) => draw.result) ? (
+              <div className="admin-draw-results">
+                {drawState.draws.map((draw) =>
+                  draw.result ? (
+                    <div className="admin-draw-result" key={draw.prizeKey}>
+                      <span>{draw.label}</span>
+                      <strong className="admin-draw-number">
+                        {formatLuckyNumber(draw.result.winningNumber)}
+                      </strong>
+                      <small>{draw.result.winners.join(" · ") || "Chưa có người trúng"}</small>
+                    </div>
+                  ) : null,
+                )}
+              </div>
+            ) : null}
+          </section>
+
           <table
             className="admin-table"
             aria-label="Danh sách phản hồi khách mời"
@@ -638,7 +937,7 @@ export function AdminDashboard() {
                 <th scope="col">Lịch sử</th>
               </tr>
             </thead>
-            {guests.map((guest, index) => {
+            {filteredGuests.map((guest, index) => {
               const expanded = expandedGuestIds.has(guest.id);
               const historyId = `admin-history-${guest.id}`;
               const history = guest.history;
@@ -652,6 +951,18 @@ export function AdminDashboard() {
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <strong>{guest.fullName}</strong>
+                        {guest.luckyNumbers ? (
+                          <span className="admin-lucky-numbers">
+                            {guest.luckyNumbers.map((number) => (
+                              <span key={number}>{formatLuckyNumber(number)}</span>
+                            ))}
+                          </span>
+                        ) : null}
+                        {guest.wonPrizes.length ? (
+                          <span className="admin-won-prizes">
+                            {guest.wonPrizes.join(" · ")}
+                          </span>
+                        ) : null}
                       </td>
                       <td data-label="Trạng thái">
                         <span
@@ -733,6 +1044,11 @@ export function AdminDashboard() {
               );
             })}
           </table>
+          {filteredGuests.length === 0 ? (
+            <p className="admin-filter-empty" role="status">
+              Không có khách mời phù hợp với bộ lọc hiện tại.
+            </p>
+          ) : null}
         </section>
       </div>
     </main>

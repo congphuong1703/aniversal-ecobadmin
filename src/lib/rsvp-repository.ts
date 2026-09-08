@@ -7,9 +7,18 @@ import { GUESTS } from "@/data/guests";
 import { getE2eRsvpPersistence } from "@/lib/e2e-rsvp-repository";
 import { isE2eMemoryRepositoryEnabled } from "@/lib/e2e-mode";
 import { getGuestDirectory } from "@/lib/guest-directory";
+import {
+  getLuckyDrawState,
+  type LuckyDrawState,
+} from "@/lib/lucky-draw-repository";
+import {
+  listLuckyNumberAssignments,
+  type LuckyNumberAssignmentRow,
+} from "@/lib/lucky-number-repository";
 import { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 import { rsvpMessageSchema } from "@/lib/rsvp-schema";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import type { LuckyNumbers } from "@/lib/lucky-number";
 
 export { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 
@@ -45,6 +54,8 @@ export type CreateSubmissionInput = {
 export type AdminGuestRow = GuestRecord & {
   currentSubmission: RsvpSubmission | null;
   history: RsvpSubmission[];
+  luckyNumbers: LuckyNumbers | null;
+  wonPrizes: readonly string[];
 };
 
 export type DashboardSummary = {
@@ -76,6 +87,20 @@ export type RsvpRepository = {
     input: CreateSubmissionInput,
   ): Promise<{ submission: RsvpSubmission; deduplicated: boolean }>;
   getAdminDashboard(): Promise<AdminDashboard>;
+};
+
+type LuckyNumberDashboardSource = {
+  listAssignments(): Promise<readonly LuckyNumberAssignmentRow[]>;
+  getState(): Promise<LuckyDrawState>;
+};
+
+const emptyLuckyNumberDashboardSource: LuckyNumberDashboardSource = {
+  async listAssignments() {
+    return [];
+  },
+  async getState() {
+    return { draws: [] };
+  },
 };
 
 export type SubmissionCursor = {
@@ -212,6 +237,8 @@ function newestFirst(left: RsvpSubmissionRow, right: RsvpSubmissionRow) {
 export function createRsvpRepository(
   persistence: RsvpPersistenceAdapter,
   guests: readonly GuestRecord[] = GUESTS,
+  luckyNumberSource: LuckyNumberDashboardSource =
+    emptyLuckyNumberDashboardSource,
 ): RsvpRepository {
   async function createSubmissionWithMetadata(input: CreateSubmissionInput) {
     if (!guests.some(({ id }) => id === input.guestId)) {
@@ -252,12 +279,32 @@ export function createRsvpRepository(
     createSubmissionWithMetadata,
 
     async getAdminDashboard() {
+      const [submissionRows, assignments, drawState] = await Promise.all([
+        persistence.listSubmissions(),
+        luckyNumberSource.listAssignments(),
+        luckyNumberSource.getState(),
+      ]);
       const rowsByGuestId = new Map<string, RsvpSubmissionRow[]>();
 
-      for (const row of await persistence.listSubmissions()) {
+      for (const row of submissionRows) {
         const guestRows = rowsByGuestId.get(row.guest_id) ?? [];
         guestRows.push(row);
         rowsByGuestId.set(row.guest_id, guestRows);
+      }
+
+      const assignmentsByGuestId = new Map(
+        assignments.map((assignment) => [assignment.guest_id, assignment]),
+      );
+      const prizeLabelsByNumber = new Map<number, string[]>();
+
+      for (const draw of drawState.draws) {
+        if (!draw.result) {
+          continue;
+        }
+
+        const labels = prizeLabelsByNumber.get(draw.result.winningNumber) ?? [];
+        labels.push(draw.label);
+        prizeLabelsByNumber.set(draw.result.winningNumber, labels);
       }
 
       const dashboardGuests = guests.map<AdminGuestRow>((guest) => {
@@ -265,10 +312,25 @@ export function createRsvpRepository(
           .sort(newestFirst)
           .map(mapSubmission);
 
+        const assignment = assignmentsByGuestId.get(guest.id);
+        const luckyNumbers =
+          history[0]?.attending && assignment ? assignment.numbers : null;
+        const wonPrizes = assignment
+          ? [
+              ...new Set(
+                assignment.numbers.flatMap(
+                  (number) => prizeLabelsByNumber.get(number) ?? [],
+                ),
+              ),
+            ]
+          : [];
+
         return {
           ...guest,
           currentSubmission: history[0] ?? null,
           history,
+          luckyNumbers,
+          wonPrizes,
         };
       });
       const attending = dashboardGuests.filter(
@@ -363,7 +425,16 @@ const supabasePersistence: RsvpPersistenceAdapter = {
   },
 };
 
-const productionRepository = createRsvpRepository(supabasePersistence);
+const productionLuckyNumberSource: LuckyNumberDashboardSource = {
+  listAssignments: listLuckyNumberAssignments,
+  getState: getLuckyDrawState,
+};
+
+const productionRepository = createRsvpRepository(
+  supabasePersistence,
+  GUESTS,
+  productionLuckyNumberSource,
+);
 
 type RepositoryEnvironment = {
   NODE_ENV?: string;
@@ -397,6 +468,10 @@ function activeRepository(scope = "default") {
       createRsvpRepository(
         getE2eRsvpPersistence(memoryScope),
         getGuestDirectory(),
+        {
+          listAssignments: () => listLuckyNumberAssignments(memoryScope),
+          getState: () => getLuckyDrawState(memoryScope),
+        },
       ),
   });
 }

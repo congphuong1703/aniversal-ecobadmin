@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { LuckyDrawState } from "@/lib/lucky-draw-repository";
 import type { AdminGuestRow, DashboardSummary } from "@/lib/rsvp-repository";
 import { AdminDashboard } from "./admin-dashboard";
 
@@ -38,6 +39,8 @@ const GUESTS: AdminGuestRow[] = [
     id: "guest-01",
     fullName: "Nguyễn Văn An",
     imagePath: "/guests/guest-01.svg",
+    luckyNumbers: null,
+    wonPrizes: [],
     currentSubmission: {
       id: "20000000-0000-4000-8000-000000000002",
       guestId: "guest-01",
@@ -69,12 +72,68 @@ const GUESTS: AdminGuestRow[] = [
     id: "guest-02",
     fullName: "Trần Minh Châu",
     imagePath: "/guests/guest-02.svg",
+    luckyNumbers: null,
+    wonPrizes: [],
     currentSubmission: null,
     history: [],
   },
 ];
 
+const STATUS_GUESTS: AdminGuestRow[] = [
+  GUESTS[0],
+  GUESTS[1],
+  {
+    ...GUESTS[0],
+    id: "guest-03",
+    fullName: "Lê Hoàng Dũng",
+    currentSubmission: {
+      ...GUESTS[0].currentSubmission!,
+      id: "20000000-0000-4000-8000-000000000003",
+      guestId: "guest-03",
+      attending: true,
+      message: null,
+    },
+    history: [],
+  },
+];
+
 const fetchMock = vi.fn<typeof fetch>();
+
+const DRAW_STATE: LuckyDrawState = {
+  draws: [
+    {
+      prizeRank: 1,
+      prizeKey: "special",
+      label: "Giải đặc biệt",
+      result: null,
+    },
+    {
+      prizeRank: 2,
+      prizeKey: "second",
+      label: "Giải nhì",
+      result: null,
+    },
+    {
+      prizeRank: 3,
+      prizeKey: "third",
+      label: "Giải ba",
+      result: null,
+    },
+    {
+      prizeRank: 4,
+      prizeKey: "fourth",
+      label: "Giải tư",
+      result: null,
+    },
+    {
+      prizeRank: 5,
+      prizeKey: "fifth",
+      label: "Giải năm",
+      reward: "Phạt 1 cốc bia",
+      result: null,
+    },
+  ],
+};
 
 function sessionResponse(remainingMs = 60_000) {
   return new Response(
@@ -90,6 +149,13 @@ function dashboardResponse(
 ) {
   return new Response(
     JSON.stringify({ authenticated: true, remainingMs, summary, guests }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
+}
+
+function drawResponse(draws = DRAW_STATE.draws) {
+  return new Response(
+    JSON.stringify({ authenticated: true, remainingMs: 60_000, draws }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
 }
@@ -118,6 +184,13 @@ describe("AdminDashboard", () => {
     fetchMock.mockReset();
     refresh.mockReset();
     replace.mockReset();
+    fetchMock.mockImplementation((input) => {
+      return Promise.resolve(
+        typeof input === "string" && input === "/api/admin/draws"
+          ? drawResponse()
+          : dashboardResponse(),
+      );
+    });
     vi.stubGlobal("fetch", fetchMock);
   });
 
@@ -128,7 +201,11 @@ describe("AdminDashboard", () => {
   });
 
   it("renders all summary values, the latest RSVP, and pending guests after confirmation", async () => {
-    await renderConfirmedDashboard();
+    fetchMock.mockResolvedValueOnce(
+      dashboardResponse(60_000, SUMMARY, GUESTS),
+    );
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
 
     const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
     expect(table).toBeInTheDocument();
@@ -199,6 +276,8 @@ describe("AdminDashboard", () => {
             id: "guest-precision",
             fullName: "Nguyễn Vi Giây",
             imagePath: "/guests/guest-01.svg",
+            luckyNumbers: null,
+            wonPrizes: [],
             currentSubmission: newest,
             history: [newest, older],
           },
@@ -323,6 +402,7 @@ describe("AdminDashboard", () => {
   it("clears private data before a successful logout refresh completes", async () => {
     fetchMock
       .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(drawResponse())
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ authenticated: false }), { status: 200 }),
       );
@@ -353,7 +433,10 @@ describe("AdminDashboard", () => {
     "hides private data before invalid %s revalidation completes",
     async (eventName) => {
       let sessionChecks = 0;
-      fetchMock.mockImplementation(() => {
+      fetchMock.mockImplementation((input) => {
+        if (input === "/api/admin/draws") {
+          return Promise.resolve(drawResponse());
+        }
         sessionChecks += 1;
 
         if (sessionChecks === 1) {
@@ -391,9 +474,17 @@ describe("AdminDashboard", () => {
 
   it("fails a hung resume confirmation closed after the bounded timeout", async () => {
     vi.useFakeTimers();
-    fetchMock
-      .mockResolvedValueOnce(dashboardResponse())
-      .mockReturnValueOnce(new Promise<Response>(() => {}));
+    let sessionRequests = 0;
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
+
+      sessionRequests += 1;
+      return sessionRequests === 1
+        ? Promise.resolve(dashboardResponse())
+        : new Promise<Response>(() => {});
+    });
     replace.mockImplementation(() => {
       expect(screen.queryByText("Nguyễn Văn An")).not.toBeInTheDocument();
     });
@@ -416,11 +507,21 @@ describe("AdminDashboard", () => {
   });
 
   it("fails malformed successful confirmation responses closed", async () => {
-    fetchMock
-      .mockResolvedValueOnce(dashboardResponse())
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ authenticated: true }), { status: 200 }),
+    let sessionRequests = 0;
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
+
+      sessionRequests += 1;
+      return Promise.resolve(
+        sessionRequests === 1
+          ? dashboardResponse()
+          : new Response(JSON.stringify({ authenticated: true }), {
+              status: 200,
+            }),
       );
+    });
     renderDashboard();
     expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
 
@@ -432,9 +533,19 @@ describe("AdminDashboard", () => {
 
   it("re-anchors expiry to fresh server remaining time after resume", async () => {
     vi.useFakeTimers();
-    fetchMock
-      .mockResolvedValueOnce(dashboardResponse(1_000))
-      .mockResolvedValueOnce(sessionResponse(5_000));
+    let sessionRequests = 0;
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
+
+      sessionRequests += 1;
+      return Promise.resolve(
+        sessionRequests === 1
+          ? dashboardResponse(1_000)
+          : sessionResponse(5_000),
+      );
+    });
     renderDashboard();
     await flushAsyncWork();
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
@@ -467,13 +578,19 @@ describe("AdminDashboard", () => {
       .spyOn(performance, "now")
       .mockImplementation(() => performanceTime);
     let resolveRevalidation!: (response: Response) => void;
-    fetchMock
-      .mockResolvedValueOnce(dashboardResponse(60_000))
-      .mockReturnValueOnce(
-        new Promise<Response>((resolve) => {
-          resolveRevalidation = resolve;
-        }),
-      );
+    let sessionRequests = 0;
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
+
+      sessionRequests += 1;
+      return sessionRequests === 1
+        ? Promise.resolve(dashboardResponse(60_000))
+        : new Promise<Response>((resolve) => {
+            resolveRevalidation = resolve;
+          });
+    });
     renderDashboard();
     await flushAsyncWork();
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
@@ -526,7 +643,10 @@ describe("AdminDashboard", () => {
     let sessionChecks = 0;
     let resolveStaleRevalidation!: (response: Response) => void;
     let visibilityState: DocumentVisibilityState = "visible";
-    fetchMock.mockImplementation(() => {
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
       sessionChecks += 1;
 
       if (sessionChecks === 1) {
@@ -574,9 +694,19 @@ describe("AdminDashboard", () => {
   });
 
   it("rejects a confirmation lifetime above the session protocol maximum", async () => {
-    fetchMock
-      .mockResolvedValueOnce(dashboardResponse())
-      .mockResolvedValueOnce(sessionResponse(8 * 60 * 60 * 1_000 + 1));
+    let sessionRequests = 0;
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
+
+      sessionRequests += 1;
+      return Promise.resolve(
+        sessionRequests === 1
+          ? dashboardResponse()
+          : sessionResponse(8 * 60 * 60 * 1_000 + 1),
+      );
+    });
     renderDashboard();
     expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
 
@@ -588,7 +718,10 @@ describe("AdminDashboard", () => {
   it("coalesces simultaneous resume events without reopening private data", async () => {
     let sessionChecks = 0;
     let resolveRevalidation!: (response: Response) => void;
-    fetchMock.mockImplementation(() => {
+    fetchMock.mockImplementation((input) => {
+      if (input === "/api/admin/draws") {
+        return Promise.resolve(drawResponse());
+      }
       sessionChecks += 1;
 
       if (sessionChecks === 1) {
@@ -617,5 +750,176 @@ describe("AdminDashboard", () => {
     await flushAsyncWork();
     expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
     visibility.mockRestore();
+  });
+
+  it("filters participants by normalized guest name", async () => {
+    await renderConfirmedDashboard();
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByRole("textbox", { name: /tìm theo tên hoặc số/i }),
+      "nguyen van an",
+    );
+
+    const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
+    expect(within(table).getByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(within(table).queryByText("Trần Minh Châu")).not.toBeInTheDocument();
+  });
+
+  it("filters participants by a formatted two-digit assigned number", async () => {
+    const user = userEvent.setup();
+    const guests: AdminGuestRow[] = [
+      {
+        ...GUESTS[0],
+        currentSubmission: {
+          ...GUESTS[0].currentSubmission!,
+          attending: true,
+        },
+        luckyNumbers: [1, 12, 22, 53, 52],
+      },
+      {
+        ...GUESTS[1],
+        luckyNumbers: [10, 20, 30, 40, 50],
+      },
+    ];
+    fetchMock.mockResolvedValueOnce(dashboardResponse(60_000, SUMMARY, guests));
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("textbox", { name: /tìm theo tên hoặc số/i }),
+      "01",
+    );
+
+    const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
+    expect(within(table).getByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(within(table).queryByText("Trần Minh Châu")).not.toBeInTheDocument();
+    expect(
+      within(table).getByText("01", {
+        selector: ".admin-lucky-numbers span",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["attending", "Tham dự", "Lê Hoàng Dũng"],
+    ["declined", "Không tham dự", "Nguyễn Văn An"],
+    ["pending", "Chưa phản hồi", "Trần Minh Châu"],
+  ])("filters participants by %s response status", async (value, label, expectedName) => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValueOnce(
+      dashboardResponse(60_000, SUMMARY, STATUS_GUESTS),
+    );
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /lọc trạng thái phản hồi/i }),
+      value,
+    );
+
+    const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
+    expect(within(table).getByText(expectedName)).toBeInTheDocument();
+    expect(within(table).getByText(label)).toBeInTheDocument();
+  });
+
+  it("filters participants by winner status and shows multiple won prizes", async () => {
+    const user = userEvent.setup();
+    const guests: AdminGuestRow[] = [
+      {
+        ...GUESTS[0],
+        wonPrizes: ["Giải đặc biệt", "Giải nhì"],
+      },
+      GUESTS[1],
+    ];
+    fetchMock.mockResolvedValueOnce(dashboardResponse(60_000, SUMMARY, guests));
+    renderDashboard();
+    expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(screen.getByText("Giải đặc biệt · Giải nhì")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /lọc người trúng giải/i }),
+      "winner",
+    );
+
+    const table = screen.getByRole("table", { name: /danh sách phản hồi/i });
+    expect(within(table).getByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(within(table).queryByText("Trần Minh Châu")).not.toBeInTheDocument();
+  });
+
+  it("renders an empty state when filters match no participants", async () => {
+    const user = userEvent.setup();
+    await renderConfirmedDashboard();
+
+    await user.type(
+      screen.getByRole("textbox", { name: /tìm theo tên hoặc số/i }),
+      "nobody",
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/không có khách mời phù hợp/i);
+  });
+
+  it("disables the draw button while the next draw is pending", async () => {
+    const user = userEvent.setup();
+    let resolveDraw!: (response: Response) => void;
+    fetchMock.mockImplementation((input, init) => {
+      if (init?.method === "POST") {
+        return new Promise<Response>((resolve) => {
+          resolveDraw = resolve;
+        });
+      }
+
+      return Promise.resolve(
+        typeof input === "string" && input === "/api/admin/draws"
+          ? drawResponse()
+          : dashboardResponse(),
+      );
+    });
+    renderDashboard();
+    expect(await screen.findByRole("button", { name: /quay giải đặc biệt/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /quay giải đặc biệt/i }));
+    expect(screen.getByRole("button", { name: /đang quay/i })).toBeDisabled();
+
+    resolveDraw(
+      new Response(JSON.stringify({ result: null }), { status: 409 }),
+    );
+  });
+
+  it("refreshes the dashboard and draw state after a successful draw", async () => {
+    const user = userEvent.setup();
+    const result = {
+      prizeRank: 1,
+      prizeKey: "special",
+      label: "Giải đặc biệt",
+      winningNumber: 1,
+      winners: ["Nguyễn Văn An"],
+      createdAt: "2026-09-17T12:30:00.000Z",
+    };
+    const completedDraws = DRAW_STATE.draws.map((draw, index) =>
+      index === 0 ? { ...draw, result } : draw,
+    );
+    fetchMock
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(drawResponse())
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(dashboardResponse())
+      .mockResolvedValueOnce(drawResponse(completedDraws));
+    renderDashboard();
+    expect(await screen.findByRole("button", { name: /quay giải đặc biệt/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /quay giải đặc biệt/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("01", { selector: ".admin-draw-number" })).toBeInTheDocument();
+    });
+    expect(fetchMock.mock.calls.filter(([input]) => input === "/api/admin/dashboard")).toHaveLength(2);
+    expect(fetchMock.mock.calls.filter(([input]) => input === "/api/admin/draws")).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/draws/next",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });
