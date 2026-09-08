@@ -13,19 +13,24 @@ export function AchievementSlide() {
           <h2 className="font-display" id="achievement-slide-title">
             Chúng mình đã tạo nên nhiều hơn những trận cầu.
           </h2>
-          <p>
-            Sau một năm, điều đọng lại ở mỗi thành viên không chỉ là kỹ thuật
-            tiến bộ hơn, mà là những khoảng khắc chúng mình đã cùng nhau tạo ra.
-          </p>
-          <p className="achievement-slide-bridge">
-            Vì thế, buổi tiệc kỷ niệm này là dịp để chúng mình cùng nhìn lại
-            hành trình đã đi qua, nâng ly cho những điều đã tạo nên EcoBadminton
-            hôm nay.
-          </p>
-          <p className="achievement-slide-sponsor">
-            EcoRun — một đối thủ, cũng là một người bạn đồng hành và là nhà tài
-            trợ kim cương cho dịp kỷ niệm này.
-          </p>
+          <div className="achievement-slide-groups">
+            <div className="achievement-slide-group">
+              <h3>EcoBadminton</h3>
+              <ul>
+                <li>1 năm cùng nhau ra sân.</li>
+                <li>1 hành trình cùng nhau tiến bộ.</li>
+                <li>1 tập thể cùng nhau gắn kết.</li>
+              </ul>
+            </div>
+            <div className="achievement-slide-group achievement-slide-group-sponsor">
+              <h3>EcoRun</h3>
+              <ul>
+                <li>1 người bạn đồng hành.</li>
+                <li>1 đối thủ trên sân.</li>
+                <li>1 Nhà tài trợ Kim cương trong dịp kỷ niệm đặc biệt này.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </section>

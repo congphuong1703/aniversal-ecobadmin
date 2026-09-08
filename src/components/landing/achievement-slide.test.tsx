@@ -4,15 +4,24 @@ import { describe, expect, it } from "vitest";
 import { AchievementSlide } from "./achievement-slide";
 
 describe("AchievementSlide", () => {
-  it("shows only the number one and the approved EcoRun acknowledgement", () => {
+  it("presents the EcoBadminton journey and EcoRun's three roles", () => {
     render(<AchievementSlide />);
 
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.queryByText("năm cùng nhau")).not.toBeInTheDocument();
+    expect(screen.getByText("1 năm cùng nhau ra sân.")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 hành trình cùng nhau tiến bộ."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("1 tập thể cùng nhau gắn kết."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 người bạn đồng hành.")).toBeInTheDocument();
+    expect(screen.getByText("1 đối thủ trên sân.")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "EcoRun — một đối thủ, cũng là một người bạn đồng hành và là nhà tài trợ kim cương cho dịp kỷ niệm này.",
+        "1 Nhà tài trợ Kim cương trong dịp kỷ niệm đặc biệt này.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("EcoRun")).toBeInTheDocument();
   });
 });

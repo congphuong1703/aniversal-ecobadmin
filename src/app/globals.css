@@ -596,9 +596,34 @@ button.button-ghost {
   line-height: 1.85;
 }
 
-.achievement-slide-copy .achievement-slide-bridge {
-  margin-top: 1rem;
-  color: rgb(255 255 255 / 58%);
+.achievement-slide-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  max-width: 760px;
+  margin-top: 2.25rem;
+}
+
+.achievement-slide-group h3 {
+  margin: 0 0 0.8rem;
+  color: var(--white);
+  font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+  letter-spacing: -0.02em;
+}
+
+.achievement-slide-group ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  color: rgb(255 255 255 / 72%);
+  font-size: clamp(1rem, 1.35vw, 1.16rem);
+  line-height: 1.65;
+  list-style: none;
+}
+
+.achievement-slide-group-sponsor h3 {
+  color: var(--lime);
 }
 
 .story-groups {
@@ -2210,6 +2235,10 @@ button.button-ghost {
   .story-layout,
   .achievement-slide-layout {
     gap: 3.5rem;
+  }
+
+  .achievement-slide-groups {
+    grid-template-columns: 1fr;
   }
 
   .story-teaser-section,
