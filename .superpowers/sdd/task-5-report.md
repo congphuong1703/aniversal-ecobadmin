@@ -33,3 +33,40 @@ The pre-existing untracked files `docs/superpowers/plans/2026-09-08-public-lucky
 
 - No browser/E2E run was requested or performed; responsive CSS was verified by source inspection, while the focused tests cover the public component behavior and accessibility attribute.
 - The worktree still contains the two pre-existing untracked planning/spec documents listed above; they are unrelated to this commit.
+
+## Follow-up Fix: Explicit Desktop Information Placement
+
+- Fixed `src/app/globals.css` so `.draw-info-block` explicitly places the eyebrow and heading in column 1, with rules/prize content in column 2 on desktop.
+- Added a mobile reset for explicit grid placement so the existing single-column layout remains unchanged.
+- No test update was needed; the existing public draw component test already protects both information sections and their content structure.
+- Commit: `da92247` - `fix: place public draw info columns explicitly`
+
+## Follow-up Verification
+
+### `pnpm exec vitest run src/components/draw/public-draw-page.test.tsx`
+
+```text
+ RUN  v4.1.10 /Users/phuongcong/Personal/untitled folder-public-lucky-draw
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  01:08:40
+   Duration  1.33s (transform 74ms, setup 180ms, import 87ms, tests 199ms, environment 706ms)
+```
+
+### `pnpm lint`
+
+```text
+> ecobadminton-anniversary@1.0.0 lint /Users/phuongcong/Personal/untitled folder-public-lucky-draw
+> eslint .
+```
+
+### `pnpm typecheck`
+
+```text
+> ecobadminton-anniversary@1.0.0 typecheck /Users/phuongcong/Personal/untitled folder-public-lucky-draw
+> tsc --noEmit
+```
+
+All commands exited with code 0.
