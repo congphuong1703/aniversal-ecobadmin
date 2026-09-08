@@ -25,6 +25,13 @@ Tests       15 passed (15)
 
 No database commands were run.
 
+## SQL Alias Fix
+
+- Corrected the production `unnest` alias to `u(number)` and references to `u.number` in the aggregation query.
+- Added a source-level migration assertion in `src/lib/database-migration.test.ts`.
+- Verification: `pnpm vitest run src/lib/lucky-draw-repository.test.ts src/app/api/draws/route.test.ts src/app/api/admin/draws/route.test.ts src/app/api/admin/draws/next/route.test.ts src/lib/database-migration.test.ts` passed with `5` files and `19` tests.
+- No database commands were run.
+
 ## P1 Fix Evidence
 
 - Corrected `supabase/migrations/202609080002_add_atomic_lucky_draw_function.sql` to use `unnest(assignment.numbers) AS u(number)`, with `u.number` in the aggregate `SELECT` and `GROUP BY`.
