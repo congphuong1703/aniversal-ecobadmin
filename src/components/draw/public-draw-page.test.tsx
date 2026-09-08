@@ -5,15 +5,39 @@ import { PublicDrawPage } from "./public-draw-page";
 
 const PENDING_DRAWS = {
   draws: [
-    { prizeRank: 1, prizeKey: "special", label: "Giải đặc biệt", result: null },
-    { prizeRank: 2, prizeKey: "second", label: "Giải nhì", result: null },
-    { prizeRank: 3, prizeKey: "third", label: "Giải ba", result: null },
-    { prizeRank: 4, prizeKey: "fourth", label: "Giải tư", result: null },
+    {
+      prizeRank: 1,
+      prizeKey: "special",
+      label: "Giải đặc biệt",
+      reward: "Quà tặng đặc biệt · Nội dung sẽ cập nhật",
+      result: null,
+    },
+    {
+      prizeRank: 2,
+      prizeKey: "second",
+      label: "Giải nhì",
+      reward: "Voucher mua sắm · Demo",
+      result: null,
+    },
+    {
+      prizeRank: 3,
+      prizeKey: "third",
+      label: "Giải ba",
+      reward: "Bộ quà EcoBadminton · Demo",
+      result: null,
+    },
+    {
+      prizeRank: 4,
+      prizeKey: "fourth",
+      label: "Giải tư",
+      reward: "Áo / phụ kiện CLB · Demo",
+      result: null,
+    },
     {
       prizeRank: 5,
       prizeKey: "fifth",
       label: "Giải năm",
-      reward: "Phạt 1 cốc bia",
+      reward: "Quà vui cuối chương trình · Demo",
       result: null,
     },
   ],
@@ -76,7 +100,11 @@ describe("PublicDrawPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Quay trúng thưởng" })).toBeInTheDocument();
     expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
-    expect(screen.getByText("Phạt 1 cốc bia")).toBeInTheDocument();
+    expect(screen.getByText("Quà tặng đặc biệt · Nội dung sẽ cập nhật")).toBeInTheDocument();
+    expect(screen.getByText("Voucher mua sắm · Demo")).toBeInTheDocument();
+    expect(screen.getByText("Bộ quà EcoBadminton · Demo")).toBeInTheDocument();
+    expect(screen.getByText("Áo / phụ kiện CLB · Demo")).toBeInTheDocument();
+    expect(screen.getByText("Quà vui cuối chương trình · Demo")).toBeInTheDocument();
     expect(screen.getByText(/chưa có giải nào được mở/i)).toBeInTheDocument();
     expect(screen.queryByText(/nội bộ|pháp lý/i)).not.toBeInTheDocument();
   });
