@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 
 import { enforceRateLimit, RATE_LIMIT_POLICIES } from "@/lib/rate-limit";
+import { ensureLuckyNumberAssignment } from "@/lib/lucky-number-repository";
 import {
   createSubmissionWithMetadata,
   SubmissionIdConflictError,
@@ -15,6 +16,14 @@ vi.mock("@/lib/rsvp-repository", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rsvp-repository")>();
 
   return { ...actual, createSubmissionWithMetadata: vi.fn() };
+});
+
+vi.mock("@/lib/lucky-number-repository", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/lib/lucky-number-repository")
+  >();
+
+  return { ...actual, ensureLuckyNumberAssignment: vi.fn() };
 });
 
 vi.mock("@/lib/verification-token", () => ({
@@ -35,6 +44,7 @@ const SUBMISSION = {
   clientSubmissionId: CLIENT_SUBMISSION_ID,
   createdAt: "2026-07-29T02:00:00.000Z",
 };
+const LUCKY_NUMBERS = [12, 1, 22, 53, 52] as const;
 
 function request(
   body: unknown,
@@ -69,9 +79,10 @@ describe("POST /api/rsvp", () => {
       submission: SUBMISSION,
       deduplicated: false,
     });
+    vi.mocked(ensureLuckyNumberAssignment).mockResolvedValue(LUCKY_NUMBERS);
   });
 
-  it("derives the guest id from the verified token and returns repository metadata", async () => {
+  it("returns five fixed lucky numbers for an attending request", async () => {
     const rsvpRequest = request(validBody());
     const response = await POST(rsvpRequest);
 
@@ -79,7 +90,12 @@ describe("POST /api/rsvp", () => {
     expect(await response.json()).toEqual({
       submission: SUBMISSION,
       deduplicated: false,
+      luckyNumbers: LUCKY_NUMBERS,
     });
+    expect(ensureLuckyNumberAssignment).toHaveBeenCalledWith(
+      "guest-07",
+      "worker-7",
+    );
     expect(createSubmissionWithMetadata).toHaveBeenCalledWith(
       {
         guestId: "guest-07",
@@ -98,6 +114,25 @@ describe("POST /api/rsvp", () => {
       identifier: "guest-07",
       policy: RATE_LIMIT_POLICIES.rsvpWriteGuest,
     });
+  });
+
+  it("returns no lucky numbers and does not create an assignment for a declined request", async () => {
+    vi.mocked(createSubmissionWithMetadata).mockResolvedValue({
+      submission: { ...SUBMISSION, attending: false },
+      deduplicated: false,
+    });
+
+    const response = await POST(
+      request({ ...validBody(), attending: false }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      submission: { ...SUBMISSION, attending: false },
+      deduplicated: false,
+      luckyNumbers: null,
+    });
+    expect(ensureLuckyNumberAssignment).not.toHaveBeenCalled();
   });
 
   it("accepts a selected guest directly for the invitation flow", async () => {

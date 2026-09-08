@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getE2eRsvpState } from "@/lib/e2e-rsvp-repository";
+import { getE2eLuckyNumberState } from "@/lib/e2e-lucky-number-state";
 import { enforceRateLimit, resetE2eRateLimitState } from "@/lib/rate-limit";
 import { POST } from "./route";
 
@@ -77,6 +78,19 @@ describe.sequential("POST /api/test/reset", () => {
       }),
     ]);
     await expect(getE2eRsvpState("worker-3")).resolves.toEqual([]);
+    await expect(getE2eLuckyNumberState(WORKER_ID)).resolves.toEqual([]);
+    await expect(getE2eLuckyNumberState("worker-3")).resolves.toEqual([]);
+  });
+
+  it("clears scoped lucky-number assignments before loading RSVP fixtures", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("E2E_REPOSITORY", "memory");
+
+    const firstResponse = await POST(resetRequest());
+    expect(firstResponse.status).toBe(200);
+
+    const state = await getE2eLuckyNumberState(WORKER_ID);
+    expect(state).toEqual([]);
   });
 
   it("resets the requesting worker's in-memory rate-limit buckets", async () => {

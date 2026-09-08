@@ -5,6 +5,7 @@ import type {
   RsvpSubmissionInsert,
   RsvpSubmissionRow,
 } from "@/lib/rsvp-repository";
+import { resetE2eLuckyNumberState } from "@/lib/e2e-lucky-number-state";
 import { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 
 type MemoryStore = {
@@ -58,6 +59,8 @@ export function resetE2eRsvpState(
   submissions: readonly RsvpSubmissionInsert[] = [],
 ) {
   const store: MemoryStore = { rows: [], sequence: 0 };
+
+  resetE2eLuckyNumberState(scope);
 
   for (const submission of submissions) {
     store.rows.push(createDeterministicRow(store, submission));

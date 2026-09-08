@@ -4,6 +4,7 @@ import { jsonError, parseJson } from "@/lib/api-response";
 import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 import { findGuestInActiveDirectory } from "@/lib/guest-directory";
 import { enforceRateLimit, RATE_LIMIT_POLICIES } from "@/lib/rate-limit";
+import { ensureLuckyNumberAssignment } from "@/lib/lucky-number-repository";
 import {
   createSubmissionWithMetadata,
   SubmissionIdConflictError,
@@ -71,7 +72,11 @@ export async function POST(request: Request) {
       e2eScope,
     );
 
-    return NextResponse.json(result);
+    const luckyNumbers = parsed.data.attending
+      ? await ensureLuckyNumberAssignment(guestId, e2eScope)
+      : null;
+
+    return NextResponse.json({ ...result, luckyNumbers });
   } catch (error) {
     if (error instanceof SubmissionIdConflictError) {
       return jsonError(

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { parseJson } from "@/lib/api-response";
+import { resetE2eLuckyNumberState } from "@/lib/e2e-lucky-number-state";
 import { resetE2eRsvpState } from "@/lib/e2e-rsvp-repository";
 import { isE2eMemoryRepositoryEnabled } from "@/lib/e2e-mode";
 import { e2eResetSchema, readE2eWorkerScope } from "@/lib/e2e-test-api";
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
     return parsed.response;
   }
 
+  resetE2eLuckyNumberState(scope);
   resetE2eRsvpState(
     scope,
     parsed.data.submissions.map((submission) => ({
