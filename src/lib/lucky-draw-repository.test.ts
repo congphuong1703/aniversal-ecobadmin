@@ -119,7 +119,7 @@ describe("Lucky draw repository", () => {
     });
   });
 
-  it("draws the first pending prize rank", async () => {
+  it("selects a random pending prize rank", async () => {
     await seedAssignments([
       { guest_id: "guest-01", numbers: [10, 11, 12, 13, 14] },
     ]);
@@ -128,8 +128,16 @@ describe("Lucky draw repository", () => {
       winning_number: 10,
     });
 
-    await expect(repository().drawNext()).resolves.toMatchObject({
-      prizeRank: 1,
+    const values = [1, 0];
+    const randomRepository = createLuckyDrawRepository(
+      getE2eLuckyDrawPersistence(SCOPE),
+      {
+        randomIndex: () => values.shift() ?? 0,
+      },
+    );
+
+    await expect(randomRepository.drawNext()).resolves.toMatchObject({
+      prizeRank: 3,
       winningNumber: 11,
     });
   });

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomInt } from "node:crypto";
 import { z } from "zod";
 
 import type { GuestRecord } from "@/data/guests";
@@ -213,7 +214,14 @@ export function createLuckyDrawRepository(
   async function completeInMemoryDraw() {
     const rows = (await persistence.listResults()).map(parseResult);
     const drawnRanks = new Set(rows.map(({ prize_rank }) => prize_rank));
-    const nextRank = DRAW_PRIZES.find(({ rank }) => !drawnRanks.has(rank))?.rank;
+    const pendingRanks = DRAW_PRIZES.filter(
+      ({ rank }) => !drawnRanks.has(rank),
+    ).map(({ rank }) => rank);
+    const nextRank =
+      pendingRanks[
+        (randomIndex ?? ((min, max) => randomInt(min, max)))
+          (0, pendingRanks.length)
+      ];
 
     if (nextRank === undefined) {
       throw new AllPrizesDrawnError();
