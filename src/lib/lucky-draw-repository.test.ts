@@ -152,7 +152,16 @@ describe("Lucky draw repository", () => {
       await repositoryInstance.drawNext();
     }
 
-    await expect(repositoryInstance.drawNext()).rejects.toBeInstanceOf(
+    const guardedRepository = createLuckyDrawRepository(
+      getE2eLuckyDrawPersistence(SCOPE),
+      {
+        randomIndex: () => {
+          throw new Error("random index should not be requested");
+        },
+      },
+    );
+
+    await expect(guardedRepository.drawNext()).rejects.toBeInstanceOf(
       AllPrizesDrawnError,
     );
   });

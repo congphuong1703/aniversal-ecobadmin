@@ -217,15 +217,15 @@ export function createLuckyDrawRepository(
     const pendingRanks = DRAW_PRIZES.filter(
       ({ rank }) => !drawnRanks.has(rank),
     ).map(({ rank }) => rank);
+    if (pendingRanks.length === 0) {
+      throw new AllPrizesDrawnError();
+    }
+
     const nextRank =
       pendingRanks[
         (randomIndex ?? ((min, max) => randomInt(min, max)))
           (0, pendingRanks.length)
       ];
-
-    if (nextRank === undefined) {
-      throw new AllPrizesDrawnError();
-    }
 
     const assignments = await persistence.listAssignments();
     const winningNumber = selectEligibleNumber(

@@ -34,3 +34,22 @@ DONE
 
 - None identified for Task 1.
 - Pre-existing unrelated untracked files were preserved: `docs/superpowers/plans/2026-09-08-public-lucky-draw-menu.md` and `docs/superpowers/specs/2026-09-08-public-lucky-draw-menu-design.md`.
+
+## Important Finding Fix
+
+- Guarded `pendingRanks.length === 0` before invoking either the injected random-index selector or the `randomInt` fallback, so a sixth draw reliably throws `AllPrizesDrawnError`.
+- Updated the existing sixth-draw test to use a selector that throws if called during the sixth draw. The test completes the first five draws with the deterministic test repository, then proves the empty pending-rank path does not request randomness.
+- No production SQL was changed.
+
+## Fix Tests and Outputs
+
+- `pnpm exec vitest run src/lib/lucky-draw-repository.test.ts -t "rejects a sixth draw after all five prizes are complete"`
+  - PASS: 1 test passed, 6 skipped.
+- `pnpm exec vitest run src/lib/lucky-draw-repository.test.ts`
+  - PASS: 1 test file passed, 7 tests passed.
+- `git diff --check`
+  - PASS: no whitespace errors.
+
+## Fix Commit
+
+- Pending commit at report append time.
