@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { DRAW_PRIZES } from "@/data/draw-prizes";
 import { getE2eLuckyDrawPersistence, getE2eLuckyNumberPersistence, resetE2eLuckyNumberState } from "./e2e-lucky-number-state";
 import {
   AllPrizesDrawnError,
@@ -10,6 +11,13 @@ import {
 } from "./lucky-draw-repository";
 
 const SCOPE = "draw-repository-test";
+const EXPECTED_REWARDS = [
+  "Quà tặng đặc biệt · Nội dung sẽ cập nhật",
+  "Voucher mua sắm · Demo",
+  "Bộ quà EcoBadminton · Demo",
+  "Áo / phụ kiện CLB · Demo",
+  "Quà vui cuối chương trình · Demo",
+] as const;
 
 function numbers(values: number[]) {
   return values as [number, number, number, number, number];
@@ -89,6 +97,27 @@ describe("Lucky draw repository", () => {
       [5, true],
     ]);
     expect(state.draws.map(({ result }) => result?.winningNumber)).toEqual([10, 11, 12, 13, 14]);
+  });
+
+  it("maps every configured reward into state and results", async () => {
+    await seedAssignments([
+      { guest_id: "guest-01", numbers: [10, 11, 12, 13, 14] },
+    ]);
+
+    const repositoryInstance = repository();
+    for (let index = 0; index < DRAW_PRIZES.length; index += 1) {
+      await repositoryInstance.drawNext();
+    }
+
+    const state = await repositoryInstance.getState();
+
+    expect(DRAW_PRIZES.map(({ reward }) => reward)).toEqual(EXPECTED_REWARDS);
+    expect(state.draws.map(({ prizeRank, reward }) => ({ prizeRank, reward }))).toEqual(
+      DRAW_PRIZES.map(({ rank, reward }) => ({ prizeRank: rank, reward })),
+    );
+    expect(state.draws.map(({ result }) => result?.reward)).toEqual(
+      DRAW_PRIZES.map(({ reward }) => reward),
+    );
   });
 
   it("rejects a special draw when every number has multiple owners", async () => {
