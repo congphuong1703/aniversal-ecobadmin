@@ -7,7 +7,6 @@ export function AchievementSlide() {
       <div className="section-shell achievement-slide-layout">
         <div className="achievement-slide-mark reveal" aria-hidden="true">
           <strong>1</strong>
-          <span>năm cùng nhau</span>
         </div>
         <div className="achievement-slide-copy reveal reveal-delay">
           <span className="eyebrow">2025 - 2026</span>
@@ -22,6 +21,10 @@ export function AchievementSlide() {
             Vì thế, buổi tiệc kỷ niệm này là dịp để chúng mình cùng nhìn lại
             hành trình đã đi qua, nâng ly cho những điều đã tạo nên EcoBadminton
             hôm nay.
+          </p>
+          <p className="achievement-slide-sponsor">
+            EcoRun — một đối thủ, cũng là một người bạn đồng hành và là nhà tài
+            trợ kim cương cho dịp kỷ niệm này.
           </p>
         </div>
       </div>
