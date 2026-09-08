@@ -2830,13 +2830,13 @@ button.button-ghost {
     margin-bottom: 2rem;
   }
 
-  .draw-info-block > * {
+  .draw-info-block > .eyebrow,
+  .draw-info-block > h2,
+  .draw-info-block > ol,
+  .draw-info-block > p:not(.draw-info-note),
+  .draw-info-block > .draw-info-note {
     grid-column: auto;
     grid-row: auto;
-  }
-
-  .draw-info-note {
-    grid-column: auto;
   }
 
   .draw-card-grid {

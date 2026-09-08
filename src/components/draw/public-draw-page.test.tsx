@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -91,6 +94,14 @@ describe("PublicDrawPage", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("resets explicitly placed information children on mobile", () => {
+    const styles = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+
+    expect(styles).toMatch(
+      /\.draw-info-block > \.eyebrow,[\s\S]*?\.draw-info-block > h2,[\s\S]*?\.draw-info-block > ol,[\s\S]*?\.draw-info-block > p:not\(\.draw-info-note\),[\s\S]*?\.draw-info-block > \.draw-info-note\s*\{\s*grid-column: auto;\s*grid-row: auto;/,
+    );
   });
 
   it("renders information sections, pending prizes, and reward details", async () => {
