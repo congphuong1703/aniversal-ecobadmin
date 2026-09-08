@@ -33,7 +33,7 @@ type SubmitResponse = {
 };
 
 const MESSAGE_LIMIT = 1000;
-const DECLINE_HOVER_LIMIT = 10;
+const DECLINE_HOVER_LIMIT = 5;
 const DECLINE_OFFSETS = [
   { x: -104, y: -84 },
   { x: 112, y: -84 },

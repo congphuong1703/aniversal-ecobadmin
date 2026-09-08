@@ -170,7 +170,7 @@ describe("RsvpExperience", () => {
     });
   });
 
-  it("moves the decline button ten times before enabling it", async () => {
+  it("moves the decline button five times before enabling it", async () => {
     mockGuestLoad();
     const user = userEvent.setup();
     render(<RsvpExperience />);
@@ -187,7 +187,7 @@ describe("RsvpExperience", () => {
     expect(declineButton).toHaveStyle({
       transform: "translate(-104px, -84px)",
     });
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       fireEvent.mouseEnter(declineButton);
     }
     expect(declineButton).toHaveAttribute("aria-disabled", "true");

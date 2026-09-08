@@ -70,7 +70,7 @@ test("keeps the one-popup confirmation flow visible without modal scrolling", as
   await page.setViewportSize({ width: 1366, height: 768 });
   await openConfirmation(page);
   await expectDialogWithoutScroll(page);
-  await expect(page.getByLabel("Lời nhắn cho EcoBadminton Không bắt buộc")).toBeVisible();
+  await expect(page.getByLabel("Lời nhắn cho EcoBadminton")).toBeVisible();
   await expect(page.getByRole("button", { name: "Tham gia" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hẹn dịp khác" })).toHaveAttribute(
     "aria-disabled",
@@ -83,7 +83,7 @@ test("completes an attending RSVP responsively and opens the approved map", asyn
 }, testInfo) => {
   await openConfirmation(page);
   await page
-    .getByLabel("Lời nhắn cho EcoBadminton Không bắt buộc")
+    .getByLabel("Lời nhắn cho EcoBadminton")
     .fill("Hẹn gặp cả đội!");
   await page.getByRole("button", { name: "Tham gia" }).click();
 
@@ -118,19 +118,20 @@ test("completes an attending RSVP responsively and opens the approved map", asyn
   await expectNoHorizontalOverflow(page);
 });
 
-test("declines only after the Hẹn dịp khác button has been hovered three times", async ({
+test("declines only after the Hẹn dịp khác button has been hovered five times", async ({
   page,
   request,
 }, testInfo) => {
   await openConfirmation(page);
   const declineButton = page.getByRole("button", { name: "Hẹn dịp khác" });
   await expect(declineButton).toHaveAttribute("aria-disabled", "true");
-  await declineButton.hover();
-  await declineButton.hover();
-  await declineButton.hover();
+  for (let index = 0; index < 5; index += 1) {
+    await page.mouse.move(0, 0);
+    await declineButton.hover();
+  }
   await expect(declineButton).toHaveAttribute("aria-disabled", "false");
   await declineButton.click();
-  await expect(page.getByText(/Tiếc một chút/)).toBeVisible();
+  await expect(page.getByText(/Thật tiếc quá/)).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   const scope = workerScope(testInfo.project.name, testInfo.workerIndex);
@@ -207,6 +208,6 @@ test("supports keyboard selection, full names, and reduced motion", async ({
 
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByText("E2E Guest 02")).toBeVisible();
+  await expect(page.getByText("E2E Guest 02", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Tham gia" })).toBeVisible();
 });

@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
+import { Modal } from "@/components/ui/modal";
+
 export type StoryGalleryImage = {
   src: string;
   alt: string;
@@ -17,7 +19,22 @@ type StoryGalleryProps = {
   layout?: "feature" | "duo" | "collage" | "strip" | "mosaic";
 };
 
-const ROTATION_MS = 2000;
+const ROTATION_MS = 3000;
+
+function getSlideStateCount(
+  layout: StoryGalleryProps["layout"],
+  imageCount: number,
+) {
+  if (imageCount === 0) {
+    return 0;
+  }
+
+  if (layout === "mosaic" && imageCount > 5) {
+    return 2;
+  }
+
+  return imageCount;
+}
 
 function getVisibleSlotCount(
   layout: StoryGalleryProps["layout"],
@@ -48,27 +65,29 @@ export function StoryGallery({
 }: StoryGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<StoryGalleryImage | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (images.length < 2 || isPaused) {
+    if (images.length < 2 || isPaused || selectedImage !== null) {
       return;
     }
 
     const timer = window.setInterval(() => {
-      setActiveIndex((index) =>
-        layout === "mosaic" && images.length > 5
-          ? (index + 1) % 2
-          : (index + 1) % images.length,
+      setActiveIndex(
+        (index) => (index + 1) % getSlideStateCount(layout, images.length),
       );
     }, ROTATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [images.length, isPaused, layout]);
+  }, [images.length, isPaused, layout, selectedImage]);
 
   if (images.length === 0) {
     return null;
   }
 
+  const slideStateCount = getSlideStateCount(layout, images.length);
   const visibleSlotCount = getVisibleSlotCount(layout, images.length, activeIndex);
   const mosaicPhase = layout === "mosaic" && images.length > 5 ? activeIndex : 0;
   const mosaicStart = mosaicPhase === 0 ? 0 : 5;
@@ -94,14 +113,21 @@ export function StoryGallery({
               className={`story-gallery-slide story-gallery-slot-${slot}${slot === 0 ? " is-active" : ""}`}
               key={`${image.src}-${slot}`}
             >
-              <Image
-                alt={image.alt}
-                fill
-                priority={index === 0}
-                sizes="(min-width: 1100px) 680px, (min-width: 760px) 55vw, calc(100vw - 40px)"
-                src={image.src}
-                style={{ objectFit: "cover" }}
-              />
+              <button
+                aria-label={`Mở ảnh: ${image.alt}`}
+                className="story-gallery-image-button"
+                type="button"
+                onClick={() => setSelectedImage(image)}
+              >
+                <Image
+                  alt={image.alt}
+                  fill
+                  priority={index === 0}
+                  sizes="(min-width: 1100px) 680px, (min-width: 760px) 55vw, calc(100vw - 40px)"
+                  src={image.src}
+                  style={{ objectFit: "cover" }}
+                />
+              </button>
             </figure>
           ))}
         </div>
@@ -110,44 +136,37 @@ export function StoryGallery({
 
       {images.length > 1 ? (
         <div className="story-gallery-controls" role="tablist" aria-label={`Chuyển ảnh: ${label}`}>
-          {images.map((image, index) => (
+          {Array.from({ length: slideStateCount }, (_, index) => (
             <button
-              aria-label={`Xem ảnh ${index + 1} trong ${label}`}
-              aria-selected={
-                index ===
-                (layout === "mosaic" && images.length > 5
-                  ? activeIndex === 0
-                    ? 0
-                    : 5
-                  : activeIndex)
-              }
-              className={
-                index ===
-                (layout === "mosaic" && images.length > 5
-                  ? activeIndex === 0
-                    ? 0
-                    : 5
-                  : activeIndex)
-                  ? "is-active"
-                  : ""
-              }
-              key={image.src}
+              aria-label={`${layout === "mosaic" && images.length > 5 ? "Xem nhóm ảnh" : "Xem ảnh"} ${index + 1} trong ${label}`}
+              aria-selected={index === activeIndex}
+              className={index === activeIndex ? "is-active" : ""}
+              key={`${label}-${index}`}
               role="tab"
               type="button"
-              onClick={() =>
-                setActiveIndex(
-                  layout === "mosaic" && images.length > 5
-                    ? index < 5
-                      ? 0
-                      : 1
-                    : index,
-                )
-              }
+              onClick={() => setActiveIndex(index)}
             >
               <span aria-hidden="true" />
             </button>
           ))}
         </div>
+      ) : null}
+
+      {selectedImage ? (
+        <Modal
+          label={`Xem ảnh: ${selectedImage.alt}`}
+          onClose={() => setSelectedImage(null)}
+        >
+          <div className="story-gallery-lightbox">
+            <Image
+              alt={selectedImage.alt}
+              className="story-gallery-modal-image"
+              height={selectedImage.height}
+              src={selectedImage.src}
+              width={selectedImage.width}
+            />
+          </div>
+        </Modal>
       ) : null}
     </div>
   );

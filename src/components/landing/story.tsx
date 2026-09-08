@@ -177,12 +177,6 @@ const STORY_IMAGES: Record<string, readonly StoryGalleryImage[]> = {
       height: 4284,
     },
     {
-      src: "/story/page-5-6.jpg",
-      alt: "Thành viên EcoBadminton trong trận đấu",
-      width: 4284,
-      height: 5712,
-    },
-    {
       src: "/story/page-5-7.jpg",
       alt: "Khoảnh khắc nghỉ giữa các trận cầu",
       width: 4032,
@@ -291,7 +285,9 @@ function StoryChapter({
               <i aria-hidden="true" />
             </div>
           ) : null}
-          {pretitle ? <p className="story-chapter-pretitle">{pretitle}</p> : null}
+          {pretitle ? (
+            <p className="story-chapter-pretitle">{pretitle}</p>
+          ) : null}
           <h2 className="story-chapter-description">{description}</h2>
           {context ? <p className="story-chapter-context">{context}</p> : null}
         </div>
@@ -317,7 +313,8 @@ function StoryTimeline() {
       <div className="section-shell">
         <div className="story-timeline-intro-wrap reveal">
           <p className="story-timeline-intro" id="story-timeline-title">
-            Khởi đầu với số lượng khiêm tốn, EcoBadminton đã không ngừng lớn lên.
+            Khởi đầu với số lượng khiêm tốn, EcoBadminton đã không ngừng lớn
+            lên.
           </p>
           <p className="story-timeline-intro-copy">
             Ngày đầu tiên, 7 thành viên cùng đứng trên một sân cầu. Từ mỗi lần
@@ -382,7 +379,10 @@ function StoryTimeline() {
                 <span className="story-timeline-point-count">
                   {entry.displayCount}
                 </span>
-                <span className="story-timeline-point-rail" aria-hidden="true" />
+                <span
+                  className="story-timeline-point-rail"
+                  aria-hidden="true"
+                />
                 <div className="story-timeline-point-info">
                   <strong>{entry.date}</strong>
                   <span>{entry.names?.join(" · ") ?? "Đang mở rộng"}</span>
@@ -414,7 +414,10 @@ function StoryTimeline() {
 
 function StoryInvite() {
   return (
-    <section className="story-invite-section" aria-labelledby="story-invite-title">
+    <section
+      className="story-invite-section"
+      aria-labelledby="story-invite-title"
+    >
       <div className="section-shell story-invite-inner">
         <div className="story-invite-art reveal reveal-delay">
           <div className="story-invite-art-frame">
@@ -439,7 +442,8 @@ function StoryInvite() {
             <li>Phí rời nhóm</li>
           </ul>
           <p className="story-invite-promise">
-            Giờ đây, bạn có thể yên tâm <strong>THAM GIA</strong> cùng chúng mình rồi nè!
+            Giờ đây, bạn có thể yên tâm <strong>THAM GIA</strong> cùng chúng
+            mình rồi nè!
           </p>
         </div>
       </div>
@@ -485,7 +489,7 @@ export function Story() {
       <StoryChapter
         images={STORY_IMAGES.page5}
         label="Cách chúng mình hoạt động"
-        description="Thật sự thì 2 tuần/buổi vẫn chưa thấm vào đâu so với tinh thần ở EcoBadminton, bạn nghĩ sao nếu chúng mình tăng lên 5 buổi/tuần?"
+        description="Thật sự thì 2 buổi/tuần vẫn chưa thấm vào đâu so với tinh thần ở EcoBadminton, bạn nghĩ sao nếu chúng mình tăng lên 5 buổi/tuần?"
         showTag={true}
         arrangement="stacked"
         layout="strip"

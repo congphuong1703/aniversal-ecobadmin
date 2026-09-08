@@ -6,7 +6,7 @@ export function AchievementSlide() {
     >
       <div className="section-shell achievement-slide-layout">
         <div className="achievement-slide-mark reveal" aria-hidden="true">
-          <strong>01</strong>
+          <strong>1</strong>
           <span>năm cùng nhau</span>
         </div>
         <div className="achievement-slide-copy reveal reveal-delay">
@@ -19,8 +19,9 @@ export function AchievementSlide() {
             tiến bộ hơn, mà là những khoảng khắc chúng mình đã cùng nhau tạo ra.
           </p>
           <p className="achievement-slide-bridge">
-            Vì thế, buổi tiệc kỷ niệm này là dịp để chúng mình cùng nhìn lại hành
-            trình đã đi qua, nâng ly cho những điều đã tạo nên EcoBadminton hôm nay.
+            Vì thế, buổi tiệc kỷ niệm này là dịp để chúng mình cùng nhìn lại
+            hành trình đã đi qua, nâng ly cho những điều đã tạo nên EcoBadminton
+            hôm nay.
           </p>
         </div>
       </div>

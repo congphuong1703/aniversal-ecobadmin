@@ -9,68 +9,32 @@ test("keeps the story header in the primary brand color", async ({ page }) => {
   );
 });
 
-test("shows every story image without cropping at its natural aspect ratio", async ({
+test("matches gallery indicators to slide states and opens an image modal", async ({
   page,
 }) => {
   await page.goto("/story");
 
-  const photos = page.locator(".photo-grid-item img");
-  await expect(photos).toHaveCount(17);
+  const galleries = page.locator(".story-gallery");
+  await expect(galleries).toHaveCount(5);
 
-  const ratios = [];
-
-  for (let index = 0; index < (await photos.count()); index += 1) {
-    const photo = photos.nth(index);
-    await photo.scrollIntoViewIfNeeded();
-    await expect
-      .poll(() => photo.evaluate((image) => (image as HTMLImageElement).naturalWidth))
-      .toBeGreaterThan(0);
-
-    ratios.push(
-      await photo.evaluate((image) => {
-        const storyPhoto = image as HTMLImageElement;
-        const bounds = storyPhoto.getBoundingClientRect();
-        const itemBounds = storyPhoto
-          .closest(".photo-grid-item")
-          ?.getBoundingClientRect();
-
-        return {
-          alt: storyPhoto.alt,
-          natural: storyPhoto.naturalWidth / storyPhoto.naturalHeight,
-          rendered: bounds.width / bounds.height,
-          imageBounds: bounds.toJSON(),
-          itemBounds: itemBounds?.toJSON(),
-        };
-      }),
-    );
+  const expectedIndicatorCounts = [0, 2, 5, 7, 2];
+  for (let index = 0; index < expectedIndicatorCounts.length; index += 1) {
+    await expect(
+      galleries.nth(index).locator(".story-gallery-controls button"),
+    ).toHaveCount(expectedIndicatorCounts[index]);
   }
 
-  for (const ratio of ratios) {
-    expect(
-      Math.abs(ratio.rendered - ratio.natural),
-      `${ratio.alt} should keep its natural aspect ratio`,
-    ).toBeLessThan(0.01);
-
-    expect(ratio.itemBounds).toBeDefined();
-    expect(ratio.imageBounds.left).toBeGreaterThanOrEqual(
-      ratio.itemBounds?.left ?? 0,
-    );
-    expect(ratio.imageBounds.right).toBeLessThanOrEqual(
-      ratio.itemBounds?.right ?? 0,
-    );
-    expect(ratio.imageBounds.top).toBeGreaterThanOrEqual(
-      ratio.itemBounds?.top ?? 0,
-    );
-    expect(ratio.imageBounds.bottom).toBeLessThanOrEqual(
-      ratio.itemBounds?.bottom ?? 0,
-    );
-  }
-
-  const teamPhoto = ratios.find(({ alt }) => alt.includes("Đội hình"));
-  expect(teamPhoto).toBeDefined();
-  expect(teamPhoto!.imageBounds.width / teamPhoto!.itemBounds!.width).toBeGreaterThan(
-    0.95,
-  );
+  const firstImage = page
+    .locator(".story-gallery-image-button")
+    .first();
+  await firstImage.scrollIntoViewIfNeeded();
+  await firstImage.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("dialog").locator(".story-gallery-modal-image"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Đóng" }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
 
   expect(
     await page.evaluate(
