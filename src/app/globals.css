@@ -1543,6 +1543,22 @@ button.button-ghost {
   border-top: 1px solid var(--border);
 }
 
+.draw-info-block > .eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.draw-info-block > h2 {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.draw-info-block > ol,
+.draw-info-block > p:not(.draw-info-note) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
 .draw-info-block h2,
 .draw-results-heading h2 {
   margin: 0;
@@ -2812,6 +2828,11 @@ button.button-ghost {
     grid-template-columns: 1fr;
     gap: 1rem;
     margin-bottom: 2rem;
+  }
+
+  .draw-info-block > * {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .draw-info-note {
