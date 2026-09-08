@@ -29,11 +29,11 @@ begin
   select owned.number
     into selected_number
     from (
-      select number::smallint as number,
+      select u.number::smallint as number,
              count(distinct assignment.guest_id)::integer as owner_count
         from public.lucky_number_assignments as assignment
-        cross join lateral unnest(assignment.numbers) as number
-       group by number
+        cross join lateral unnest(assignment.numbers) as u(number)
+       group by u.number
     ) as owned
    where not exists (
            select 1

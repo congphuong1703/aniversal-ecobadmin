@@ -7,6 +7,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 let migration = "";
 let luckyNumberMigration = "";
+let luckyDrawMigration = "";
 
 describe("Supabase migration", () => {
   beforeAll(async () => {
@@ -23,6 +24,15 @@ describe("Supabase migration", () => {
       fileURLToPath(
         new URL(
           "../../supabase/migrations/202609080001_create_lucky_number_tables.sql",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    luckyDrawMigration = await readFile(
+      fileURLToPath(
+        new URL(
+          "../../supabase/migrations/202609080002_add_atomic_lucky_draw_function.sql",
           import.meta.url,
         ),
       ),
@@ -66,5 +76,13 @@ describe("Supabase migration", () => {
     expect(luckyNumberMigration).toMatch(
       /constraint lucky_number_assignments_array_shape check \(\s*array_ndims\(numbers\) = 1\s*and array_lower\(numbers, 1\) = 1\s*and array_upper\(numbers, 1\) = 5\s*\),/i,
     );
+  });
+
+  it("names the scalar output of the lucky draw number unnest", () => {
+    expect(luckyDrawMigration).toMatch(
+      /cross join lateral unnest\(assignment\.numbers\) as u\(number\)/i,
+    );
+    expect(luckyDrawMigration).toMatch(/select u\.number::smallint as number/i);
+    expect(luckyDrawMigration).toMatch(/group by u\.number/i);
   });
 });

@@ -5,7 +5,7 @@
 - Fixed in-memory draw selection to choose the lowest missing prize rank from 1 through 5.
 - Fixed the atomic SQL draw function to choose the lowest missing prize rank from 1 through 5.
 - Fixed `POST /api/admin/draws/next` to reject missing, invalid, and expired admin sessions with `401` before drawing.
-- Preserved the existing focused regression tests; no additional tests were needed.
+- Preserved the existing focused regression tests and added a source-level assertion for the atomic draw migration's explicit `unnest` scalar alias.
 
 ## TDD Evidence
 
@@ -24,3 +24,10 @@ Tests       15 passed (15)
 ```
 
 No database commands were run.
+
+## P1 Fix Evidence
+
+- Corrected `supabase/migrations/202609080002_add_atomic_lucky_draw_function.sql` to use `unnest(assignment.numbers) AS u(number)`, with `u.number` in the aggregate `SELECT` and `GROUP BY`.
+- Added a focused migration assertion in `src/lib/database-migration.test.ts`; its RED run failed against the prior SQL as expected.
+- The Task 3 focused suite, including the migration assertion, passed: 5 test files and 19 tests.
+- No database commands were run.
