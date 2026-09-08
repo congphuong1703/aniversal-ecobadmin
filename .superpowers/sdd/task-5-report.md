@@ -70,3 +70,47 @@ The pre-existing untracked files `docs/superpowers/plans/2026-09-08-public-lucky
 ```
 
 All commands exited with code 0.
+
+## Follow-up Fix: Mobile Explicit Placement Specificity
+
+- Fixed `src/app/globals.css` so the mobile reset explicitly targets every desktop-placed child (`.eyebrow`, `h2`, `ol`, prize content paragraphs, and `.draw-info-note`) with specificity equal to the desktop selectors.
+- All explicitly placed information children now reset to `grid-column: auto` and `grid-row: auto` on mobile; desktop placement remains unchanged.
+- Added a regression assertion in `src/components/draw/public-draw-page.test.tsx` that protects the complete mobile reset selector list.
+- Commit: `e32e585` - `fix: reset public draw info grid on mobile`
+
+## Follow-up Verification
+
+### `pnpm exec vitest run src/components/draw/public-draw-page.test.tsx`
+
+```text
+ RUN  v4.1.10 /Users/phuongcong/Personal/untitled folder-public-lucky-draw
+
+ Test Files  1 passed (1)
+ Tests  6 passed (6)
+ Start at 01:19:24
+ Duration 1.27s (transform 65ms, setup 129ms, import 98ms, tests 264ms, environment 662ms)
+```
+
+### `pnpm lint`
+
+```text
+> ecobadminton-anniversary@1.0.0 lint /Users/phuongcong/Personal/untitled folder-public-lucky-draw
+> eslint .
+
+exit code: 0
+```
+
+### `pnpm typecheck`
+
+```text
+> ecobadminton-anniversary@1.0.0 typecheck /Users/phuongcong/Personal/untitled folder-public-lucky-draw
+> tsc --noEmit
+
+exit code: 0
+```
+
+### `git diff --check`
+
+```text
+exit code: 0; no whitespace errors
+```
