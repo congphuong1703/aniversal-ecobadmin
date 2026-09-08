@@ -13,6 +13,7 @@ DONE_WITH_CONCERNS
 ## Commits
 
 - `0719c61a79a0163c564afacf4d9e29fb2d0a6554` - `feat: add editable lucky draw prize details`
+- `c705654` - `docs: report task 3 prize content`
 
 ## Tests and outputs
 
