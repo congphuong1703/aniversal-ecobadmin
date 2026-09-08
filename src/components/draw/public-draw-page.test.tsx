@@ -106,6 +106,10 @@ describe("PublicDrawPage", () => {
     expect(screen.getByRole("heading", { name: "Thể lệ tham gia" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Giải thưởng" })).toBeInTheDocument();
     expect(screen.getByText("Đã mở 0/5 giải")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: /tiến trình quay/i })).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
     expect(screen.getByText(/admin là người duy nhất được quay/i)).toBeInTheDocument();
     expect(screen.getByText(/tất cả khách có cùng số trúng/i)).toBeInTheDocument();
     expect(screen.getAllByText("Chờ quay")).toHaveLength(5);

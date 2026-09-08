@@ -1461,6 +1461,29 @@ button.button-ghost {
     var(--ivory-soft);
 }
 
+.draw-anchor-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.25rem;
+  margin-bottom: 2rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.draw-anchor-nav a {
+  color: var(--navy-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#the-le,
+#giai-thuong,
+#ket-qua {
+  scroll-margin-top: 5rem;
+}
+
 .draw-page-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(240px, 0.38fr);
@@ -1482,6 +1505,79 @@ button.button-ghost {
   color: var(--navy-muted);
   font-size: 0.95rem;
   line-height: 1.7;
+}
+
+.draw-progress {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--white);
+}
+
+.draw-progress strong {
+  font-family: var(--font-display-face), serif;
+  font-size: clamp(1.7rem, 4vw, 3rem);
+  font-weight: 500;
+  line-height: 0.9;
+}
+
+.draw-progress span {
+  color: var(--lime);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.draw-info-block {
+  display: grid;
+  grid-template-columns: minmax(0, 0.4fr) minmax(0, 1fr);
+  gap: 1rem 3rem;
+  margin-bottom: 3rem;
+  padding: 2rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.draw-info-block h2,
+.draw-results-heading h2 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 0.9;
+}
+
+.draw-info-block ol {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--navy-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.draw-info-block li::marker {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.draw-info-note {
+  grid-column: 2;
+  margin: 0.25rem 0 0;
+  color: var(--navy-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.draw-results-heading {
+  display: grid;
+  gap: 0.55rem;
+  margin: 4rem 0 1.5rem;
 }
 
 .draw-polling-status {
@@ -2704,6 +2800,22 @@ button.button-ghost {
 
   .draw-page-heading h1 {
     font-size: clamp(3.5rem, 18vw, 5.5rem);
+  }
+
+  .draw-progress {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .draw-info-block {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .draw-info-note {
+    grid-column: auto;
   }
 
   .draw-card-grid {

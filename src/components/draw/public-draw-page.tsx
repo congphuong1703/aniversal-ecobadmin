@@ -158,6 +158,8 @@ export function PublicDrawPage() {
         </div>
         <div
           className="draw-progress"
+          role="status"
+          aria-live="polite"
           aria-label={`Tiến trình quay: ${revealedCount} trên 5 giải`}
         >
           <strong>Đã mở {revealedCount}/5 giải</strong>
