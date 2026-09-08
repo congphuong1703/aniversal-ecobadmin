@@ -134,6 +134,16 @@ export const GUESTS: readonly GuestRecord[] = [
     fullName: "Kim Ngân",
     imagePath: "/guests/guest-25.svg",
   },
+  {
+    id: "guest-26",
+    fullName: "Nguyễn Thị Tuyết Trà",
+    imagePath: "/guests/guest-26.svg",
+  },
+  {
+    id: "guest-27",
+    fullName: "Phạm Thị Thanh",
+    imagePath: "/guests/guest-27.svg",
+  },
 ];
 
 export function findGuestById(id: string) {

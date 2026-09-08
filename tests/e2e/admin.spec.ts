@@ -83,10 +83,10 @@ test("handles login failure and success, dashboard history, and logout", async (
 
   const summary = page.locator('[aria-label="Tổng quan phản hồi"]');
   const expectedMetrics = [
-    ["Tổng khách", "25"],
+    ["Tổng khách", "27"],
     ["Tham dự", "1"],
     ["Không tham dự", "1"],
-    ["Chưa phản hồi", "23"],
+    ["Chưa phản hồi", "25"],
   ] as const;
 
   for (const [index, [label, value]] of expectedMetrics.entries()) {

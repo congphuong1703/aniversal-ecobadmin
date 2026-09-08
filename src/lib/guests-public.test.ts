@@ -9,16 +9,19 @@ import { GUEST_FIXTURES } from "@/test/fixtures";
 import { getPublicGuests } from "./guests-public";
 
 describe("public guests", () => {
-  it("returns exactly 25 stable public guest projections", () => {
+  it("returns exactly 27 stable public guest projections", () => {
     const guests = getPublicGuests();
 
-    expect(guests).toHaveLength(25);
+    expect(guests).toHaveLength(27);
     expect(guests.map(({ id }) => id)).toEqual(
       Array.from(
-        { length: 25 },
+        { length: 27 },
         (_, index) => `guest-${String(index + 1).padStart(2, "0")}`,
       ),
     );
+
+    expect(guests.at(-2)?.fullName).toBe("Nguyễn Thị Tuyết Trà");
+    expect(guests.at(-1)?.fullName).toBe("Phạm Thị Thanh");
   });
 
   it("exposes the full names needed by the public invitation list", () => {
