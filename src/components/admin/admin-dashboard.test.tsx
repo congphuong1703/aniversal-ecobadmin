@@ -880,9 +880,13 @@ describe("AdminDashboard", () => {
       );
     });
     renderDashboard();
-    expect(await screen.findByRole("button", { name: /quay giải đặc biệt/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Quay giải ngẫu nhiên" }),
+    ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /quay giải đặc biệt/i }));
+    await user.click(
+      screen.getByRole("button", { name: "Quay giải ngẫu nhiên" }),
+    );
     expect(screen.getByRole("button", { name: /đang quay/i })).toBeDisabled();
 
     resolveDraw(
@@ -893,15 +897,15 @@ describe("AdminDashboard", () => {
   it("refreshes the dashboard and draw state after a successful draw", async () => {
     const user = userEvent.setup();
     const result = {
-      prizeRank: 1,
-      prizeKey: "special",
-      label: "Giải đặc biệt",
+      prizeRank: 3,
+      prizeKey: "third",
+      label: "Giải ba",
       winningNumber: 1,
       winners: ["Nguyễn Văn An"],
       createdAt: "2026-09-17T12:30:00.000Z",
     };
-    const completedDraws = DRAW_STATE.draws.map((draw, index) =>
-      index === 0 ? { ...draw, result } : draw,
+    const completedDraws = DRAW_STATE.draws.map((draw) =>
+      draw.prizeKey === result.prizeKey ? { ...draw, result } : draw,
     );
     fetchMock
       .mockResolvedValueOnce(dashboardResponse())
@@ -912,13 +916,20 @@ describe("AdminDashboard", () => {
       .mockResolvedValueOnce(dashboardResponse())
       .mockResolvedValueOnce(drawResponse(completedDraws));
     renderDashboard();
-    expect(await screen.findByRole("button", { name: /quay giải đặc biệt/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Quay giải ngẫu nhiên" }),
+    ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /quay giải đặc biệt/i }));
+    await user.click(
+      screen.getByRole("button", { name: "Quay giải ngẫu nhiên" }),
+    );
 
     await waitFor(() => {
       expect(screen.getByText("01", { selector: ".admin-draw-number" })).toBeInTheDocument();
     });
+    expect(
+      screen.getByText(result.label, { selector: ".admin-draw-result span" }),
+    ).toBeInTheDocument();
     expect(fetchMock.mock.calls.filter(([input]) => input === "/api/admin/dashboard")).toHaveLength(2);
     expect(fetchMock.mock.calls.filter(([input]) => input === "/api/admin/draws")).toHaveLength(2);
     expect(fetchMock).toHaveBeenCalledWith(

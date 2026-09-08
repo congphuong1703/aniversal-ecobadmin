@@ -47,8 +47,11 @@ async function expectPublicDrawToReveal(
   expectedNumber: string,
   expectedWinner: string,
 ) {
-  const revealedCard = page.locator(".draw-card.is-revealed").last();
-  await expect(revealedCard).toBeVisible();
+  const revealedCard = page
+    .locator(".draw-card.is-revealed")
+    .filter({ hasText: expectedNumber })
+    .filter({ hasText: expectedWinner });
+  await expect(revealedCard).toHaveCount(1);
   await expect(revealedCard.locator(".draw-winning-number")).toHaveText(
     expectedNumber,
   );
@@ -90,14 +93,19 @@ test("keeps draws admin-only and reveals each of five rounds to the public page"
 
   const winningNumbers = new Set<string>();
   for (let round = 0; round < 5; round += 1) {
-    const drawButton = adminPage.getByRole("button", { name: /Quay giải/ });
+    const drawButton = adminPage.getByRole("button", {
+      name: /Quay giải ngẫu nhiên/,
+    });
     await expect(drawButton).toBeEnabled();
     await drawButton.click();
 
     await expect(adminPage.locator(".admin-draw-result")).toHaveCount(round + 1);
-    const adminNumber = adminPage.locator(".admin-draw-number").last();
-    await expect(adminNumber).toBeVisible();
-    const winningNumber = (await adminNumber.textContent())?.trim() ?? "";
+    const adminNumbers = await adminPage
+      .locator(".admin-draw-number")
+      .allTextContents();
+    const winningNumber = adminNumbers
+      .map((number) => number.trim())
+      .find((number) => !winningNumbers.has(number)) ?? "";
     expect(winningNumber).toMatch(/^\d{2}$/);
     expect(winningNumbers.has(winningNumber)).toBe(false);
     winningNumbers.add(winningNumber);
@@ -107,7 +115,9 @@ test("keeps draws admin-only and reveals each of five rounds to the public page"
       winningNumber,
       assignment.guestName,
     );
-    await expect(publicPage.getByText("Đã mở")).toHaveCount(round + 1);
+    await expect(
+      publicPage.locator(".draw-card.is-revealed .draw-card-status"),
+    ).toHaveCount(round + 1);
   }
 
   expect(winningNumbers.size).toBe(5);

@@ -765,7 +765,8 @@ export function AdminDashboard() {
 
     return matchesSearch && matchesResponse && matchesWinner;
   });
-  const nextDraw = drawState?.draws.find((draw) => draw.result === null) ?? null;
+  const pendingDrawCount =
+    drawState?.draws.filter((draw) => draw.result === null).length ?? 0;
   const metrics = [
     { label: "Tổng khách", value: summary.total, tone: "total" },
     { label: "Tham dự", value: summary.attending, tone: "attending" },
@@ -891,21 +892,27 @@ export function AdminDashboard() {
             <div>
               <span className="eyebrow">Điều khiển quay thưởng</span>
               <h3 className="font-display" id="admin-draw-title">
-                {nextDraw ? nextDraw.label : "Đã hoàn tất năm lượt quay"}
+                {pendingDrawCount > 0
+                  ? `Còn ${pendingDrawCount} giải chờ quay`
+                  : "Đã hoàn tất năm lượt quay"}
               </h3>
               <p>
-                {nextDraw
-                  ? "Hệ thống tự chọn số hợp lệ tiếp theo theo giới hạn người sở hữu."
+                {pendingDrawCount > 0
+                  ? "Mỗi lần bấm, hệ thống sẽ ngẫu nhiên chọn một hạng giải chưa mở và một số hợp lệ."
                   : "Tất cả kết quả đã được mở cho khách mời theo dõi."}
               </p>
             </div>
             <button
               className="button-primary"
-              disabled={!nextDraw || isDrawing}
+              disabled={pendingDrawCount === 0 || isDrawing}
               onClick={() => void drawNextPrize()}
               type="button"
             >
-              {isDrawing ? "Đang quay…" : nextDraw ? `Quay ${nextDraw.label.toLowerCase()}` : "Đã hoàn tất"}
+              {isDrawing
+                ? "Đang quay…"
+                : pendingDrawCount > 0
+                  ? "Quay giải ngẫu nhiên"
+                  : "Đã hoàn tất"}
             </button>
             {drawError ? <p className="admin-draw-error" role="alert">{drawError}</p> : null}
             {drawState?.draws.some((draw) => draw.result) ? (
