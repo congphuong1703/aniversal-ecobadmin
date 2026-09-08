@@ -2512,7 +2512,24 @@ button.button-ghost {
   }
 
   .hero-nav {
-    height: 72px;
+    height: auto;
+    min-height: 72px;
+    padding-block: 0.85rem;
+    flex-wrap: wrap;
+    row-gap: 0.75rem;
+  }
+
+  .hero-nav-links {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.85rem;
+  }
+
+  .nav-story,
+  .nav-rsvp {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
   }
 
   .hero-content {

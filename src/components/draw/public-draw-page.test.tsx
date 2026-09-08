@@ -94,6 +94,20 @@ describe("PublicDrawPage", () => {
     expect(screen.getAllByText("Chờ quay")).toHaveLength(4);
   });
 
+  it("explains an initial load failure while retrying", async () => {
+    fetchMock.mockImplementationOnce(() => Promise.reject(new Error("offline")));
+
+    render(<PublicDrawPage />);
+
+    expect(
+      await screen.findByText("Chưa thể tải kết quả, đang thử lại…"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Chưa tải được bảng kết quả. Hệ thống sẽ tự thử lại."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Đang tải bảng kết quả…")).not.toBeInTheDocument();
+  });
+
   it("polls every two seconds, keeps the last good state after failure, and refreshes later", async () => {
     vi.useFakeTimers();
     fetchMock

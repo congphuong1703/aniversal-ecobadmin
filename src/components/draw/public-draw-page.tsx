@@ -67,6 +67,7 @@ function DrawCard({ draw }: { draw: LuckyDrawEntry }) {
 export function PublicDrawPage() {
   const [drawState, setDrawState] = useState<LuckyDrawState | null>(null);
   const [status, setStatus] = useState("Đang tải kết quả quay…");
+  const [hasInitialLoadFailure, setHasInitialLoadFailure] = useState(false);
   const requestInFlight = useRef(false);
   const hasGoodState = useRef(false);
 
@@ -88,10 +89,18 @@ export function PublicDrawPage() {
 
         setDrawState(nextState);
         hasGoodState.current = true;
+        setHasInitialLoadFailure(false);
         setStatus("Đang cập nhật kết quả…");
       } catch {
-        if (active && hasGoodState.current) {
+        if (!active) {
+          return;
+        }
+
+        if (hasGoodState.current) {
           setStatus("Chưa thể cập nhật, đang giữ kết quả gần nhất.");
+        } else {
+          setHasInitialLoadFailure(true);
+          setStatus("Chưa thể tải kết quả, đang thử lại…");
         }
       } finally {
         requestInFlight.current = false;
@@ -132,7 +141,9 @@ export function PublicDrawPage() {
         </p>
         {!drawState ? (
           <div className="draw-empty-state" role="status">
-            Đang tải bảng kết quả…
+            {hasInitialLoadFailure
+              ? "Chưa tải được bảng kết quả. Hệ thống sẽ tự thử lại."
+              : "Đang tải bảng kết quả…"}
           </div>
         ) : (
           <>
