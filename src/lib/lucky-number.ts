@@ -15,9 +15,7 @@ export type RandomIndex = (min: number, max: number) => number;
 
 export { DRAW_PRIZES };
 
-export function formatLuckyNumber(value: LuckyNumber): string {
-  return value.toString().padStart(2, "0");
-}
+export { formatLuckyNumber } from "@/lib/lucky-number-format";
 
 export function generateLuckyNumbers(
   randomIntGenerator: RandomInt = randomInt,

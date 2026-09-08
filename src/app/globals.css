@@ -1408,6 +1408,217 @@ button.button-ghost {
   gap: 1rem;
 }
 
+.rsvp-lucky-number-card {
+  width: min(100%, 540px);
+  padding: 1.25rem;
+  border: 1px solid rgb(165 38 28 / 35%);
+  background: rgb(255 253 248 / 72%);
+}
+
+.rsvp-lucky-number-kicker {
+  color: #a5261c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.rsvp-lucky-number-copy {
+  margin: 0.6rem 0 1rem;
+  color: var(--navy-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.rsvp-lucky-number-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lucky-number-circle {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border: 2px solid #a5261c;
+  border-radius: 50%;
+  color: #a5261c;
+  font-family: var(--font-display-face), serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.draw-public-section {
+  min-height: calc(100svh - 90px);
+  padding-block: clamp(4rem, 9vw, 8rem);
+  background:
+    radial-gradient(circle at 90% 10%, rgb(1 45 204 / 8%), transparent 22rem),
+    var(--ivory-soft);
+}
+
+.draw-page-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.38fr);
+  gap: 4rem;
+  align-items: end;
+  margin-bottom: 2rem;
+}
+
+.draw-page-heading h1 {
+  margin: 0.65rem 0 0;
+  font-size: clamp(3.6rem, 8vw, 7.5rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.82;
+}
+
+.draw-page-heading p {
+  margin: 0 0 0.35rem;
+  color: var(--navy-muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.draw-polling-status {
+  margin: 0 0 2rem;
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.draw-empty-state {
+  margin: 0 0 2rem;
+  padding: 1.3rem;
+  border: 1px dashed var(--border);
+  color: var(--navy-muted);
+  font-size: 0.88rem;
+}
+
+.draw-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.draw-card {
+  min-height: 300px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--primary);
+  background: var(--ivory);
+  box-shadow: 10px 10px 0 rgb(1 45 204 / 12%);
+}
+
+.draw-card.is-revealed {
+  background: var(--white);
+}
+
+.draw-card-heading {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.draw-card-rank {
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.draw-card h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  font-weight: 500;
+  line-height: 0.9;
+}
+
+.draw-card-reward {
+  margin: 0.55rem 0 0;
+  color: var(--navy-muted);
+  font-size: 0.72rem;
+}
+
+.draw-card-status {
+  padding: 0.35rem 0.5rem;
+  background: var(--lime);
+  color: var(--navy);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.draw-result,
+.draw-pending {
+  display: flex;
+  min-height: 190px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.draw-result-label {
+  color: var(--navy-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.draw-winning-number {
+  margin: 0.4rem 0 1rem;
+  color: #a5261c;
+  font-family: var(--font-display-face), serif;
+  font-size: clamp(4rem, 9vw, 6.5rem);
+  font-weight: 500;
+  letter-spacing: -0.08em;
+  line-height: 0.8;
+}
+
+.draw-winners ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-display-face), serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.draw-winners li:not(:last-child)::after {
+  margin-left: 0.7rem;
+  color: var(--border);
+  content: "·";
+}
+
+.draw-winners p,
+.draw-pending p {
+  margin: 0.6rem 0 0;
+  color: var(--navy-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.draw-pending-number {
+  color: var(--border);
+  font-family: var(--font-display-face), serif;
+  font-size: 4rem;
+  letter-spacing: 0.1em;
+  line-height: 0.8;
+}
+
 .site-footer {
   background: var(--primary);
   color: var(--white);
@@ -2325,6 +2536,42 @@ button.button-ghost {
 
   .rsvp-form {
     padding: 2rem 1.2rem;
+  }
+
+  .rsvp-lucky-number-card {
+    padding: 1rem;
+  }
+
+  .lucky-number-circle {
+    width: 46px;
+    height: 46px;
+    font-size: 1.25rem;
+  }
+
+  .draw-public-section {
+    padding-block: 3.5rem;
+  }
+
+  .draw-page-heading {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .draw-page-heading h1 {
+    font-size: clamp(3.5rem, 18vw, 5.5rem);
+  }
+
+  .draw-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .draw-card-heading {
+    grid-template-columns: auto 1fr;
+  }
+
+  .draw-card-status {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .attendance-options {

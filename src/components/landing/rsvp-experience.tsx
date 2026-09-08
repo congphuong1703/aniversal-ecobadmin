@@ -5,6 +5,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { EVENT } from "@/data/event";
 import type { PublicGuest } from "@/lib/guests-public";
+import { formatLuckyNumber } from "@/lib/lucky-number-format";
+import type { LuckyNumbers } from "@/lib/lucky-number";
 import { FormError } from "@/components/ui/form-error";
 import { Modal } from "@/components/ui/modal";
 
@@ -30,6 +32,11 @@ type SubmitResponse = {
     attending: boolean;
   };
   deduplicated: boolean;
+  luckyNumbers?: LuckyNumbers | null;
+};
+
+type VerificationResponse = {
+  verificationToken: string;
 };
 
 const MESSAGE_LIMIT = 1000;
@@ -74,8 +81,12 @@ export function RsvpExperience() {
   const [guests, setGuests] = useState<readonly PublicGuest[]>([]);
   const [isLoadingGuests, setIsLoadingGuests] = useState(true);
   const [selectedGuestId, setSelectedGuestId] = useState("");
+  const [verificationToken, setVerificationToken] = useState<string | null>(
+    null,
+  );
   const [message, setMessage] = useState("");
   const [submittedAttending, setSubmittedAttending] = useState(false);
+  const [luckyNumbers, setLuckyNumbers] = useState<LuckyNumbers | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [declineHoverCount, setDeclineHoverCount] = useState(0);
   const [failureContext, setFailureContext] =
@@ -149,6 +160,8 @@ export function RsvpExperience() {
 
   function selectGuest(guest: PublicGuest) {
     setSelectedGuestId(guest.id);
+    setVerificationToken(null);
+    setLuckyNumbers(null);
     setError("");
     setMessage("");
     setDeclineHoverCount(0);
@@ -169,7 +182,7 @@ export function RsvpExperience() {
     clientSubmissionId: string,
     attendingValue: boolean,
   ) {
-    if (!selectedGuestId) {
+    if (!selectedGuestId || !selectedGuest) {
       return;
     }
 
@@ -178,15 +191,50 @@ export function RsvpExperience() {
     setStatus("Đang gửi phản hồi của bạn…");
 
     try {
+      let token = verificationToken;
+
+      if (attendingValue && !token) {
+        const verificationResponse = await fetch("/api/rsvp/verify", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            guestId: selectedGuestId,
+            name: selectedGuest.fullName,
+          }),
+        });
+
+        if (!verificationResponse.ok) {
+          throw new Error(
+            await readError(
+              verificationResponse,
+              "Không thể xác minh khách mời.",
+            ),
+          );
+        }
+
+        const verification =
+          (await verificationResponse.json()) as VerificationResponse;
+        token = verification.verificationToken;
+        setVerificationToken(token);
+      }
+
+      const submission = attendingValue
+        ? {
+            verificationToken: token,
+            attending: attendingValue,
+            message: message.trim() || null,
+            clientSubmissionId,
+          }
+        : {
+            guestId: selectedGuestId,
+            attending: attendingValue,
+            message: message.trim() || null,
+            clientSubmissionId,
+          };
       const response = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          guestId: selectedGuestId,
-          attending: attendingValue,
-          message: message.trim() || null,
-          clientSubmissionId,
-        }),
+        body: JSON.stringify(submission),
       });
 
       if (!response.ok) {
@@ -195,6 +243,7 @@ export function RsvpExperience() {
 
       const body = (await response.json()) as SubmitResponse;
       setSubmittedAttending(body.submission.attending);
+      setLuckyNumbers(body.luckyNumbers ?? null);
       setSubmissionId(null);
       setStep("success");
       setStatus("Phản hồi đã được ghi nhận. Cảm ơn bạn!");
@@ -237,7 +286,9 @@ export function RsvpExperience() {
 
   function chooseAnotherGuest() {
     setSelectedGuestId("");
+    setVerificationToken(null);
     setMessage("");
+    setLuckyNumbers(null);
     setSubmissionId(null);
     setDeclineHoverCount(0);
     setError("");
@@ -461,6 +512,26 @@ export function RsvpExperience() {
             <p>
               Hẹn gặp bạn vào {EVENT.time} ngày {EVENT.date} tại {EVENT.venue}.
             </p>
+            {luckyNumbers ? (
+              <div className="rsvp-lucky-number-card">
+                <span className="rsvp-lucky-number-kicker">Vé may mắn của bạn</span>
+                <p className="rsvp-lucky-number-copy">
+                  Năm con số này được giữ cố định cho khách mời của bạn.
+                </p>
+                <ul
+                  aria-label="Năm số may mắn cố định"
+                  className="rsvp-lucky-number-list"
+                >
+                  {luckyNumbers.map((number) => (
+                    <li key={number}>
+                      <span className="lucky-number-circle">
+                        {formatLuckyNumber(number)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="rsvp-success-actions">
               <button className="button-ghost" type="button" onClick={resetResponse}>
                 Gửi phản hồi mới

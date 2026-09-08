@@ -1,0 +1,158 @@
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { PublicDrawPage } from "./public-draw-page";
+
+const PENDING_DRAWS = {
+  draws: [
+    { prizeRank: 1, prizeKey: "special", label: "Giải đặc biệt", result: null },
+    { prizeRank: 2, prizeKey: "second", label: "Giải nhì", result: null },
+    { prizeRank: 3, prizeKey: "third", label: "Giải ba", result: null },
+    { prizeRank: 4, prizeKey: "fourth", label: "Giải tư", result: null },
+    {
+      prizeRank: 5,
+      prizeKey: "fifth",
+      label: "Giải năm",
+      reward: "Phạt 1 cốc bia",
+      result: null,
+    },
+  ],
+};
+
+const REVEALED_DRAWS = {
+  draws: PENDING_DRAWS.draws.map((draw) =>
+    draw.prizeRank === 1
+      ? {
+          ...draw,
+          result: {
+            prizeRank: 1,
+            prizeKey: "special",
+            label: "Giải đặc biệt",
+            winningNumber: 1,
+            winners: ["Nguyễn Văn An", "Trần Minh Châu"],
+            createdAt: "2026-09-17T13:00:00.000Z",
+          },
+        }
+      : draw,
+  ),
+};
+
+const fetchMock = vi.fn<typeof fetch>();
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+      ...init,
+    }),
+  );
+}
+
+async function flushRequests() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+describe("PublicDrawPage", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("renders all five pending prizes and their reward details", async () => {
+    fetchMock.mockImplementationOnce(() => jsonResponse(PENDING_DRAWS));
+
+    render(<PublicDrawPage />);
+
+    expect(await screen.findByRole("heading", { name: "Quay trúng thưởng" })).toBeInTheDocument();
+    expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
+    expect(screen.getByText("Phạt 1 cốc bia")).toBeInTheDocument();
+    expect(screen.getByText(/chưa có giải nào được mở/i)).toBeInTheDocument();
+    expect(screen.queryByText(/nội bộ|pháp lý/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the two-digit winning number and every winner name", async () => {
+    fetchMock.mockImplementationOnce(() => jsonResponse(REVEALED_DRAWS));
+
+    render(<PublicDrawPage />);
+
+    expect(
+      await screen.findByText("01", { selector: ".draw-winning-number" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nguyễn Văn An")).toBeInTheDocument();
+    expect(screen.getByText("Trần Minh Châu")).toBeInTheDocument();
+    expect(screen.getAllByText("Chờ quay")).toHaveLength(4);
+  });
+
+  it("polls every two seconds, keeps the last good state after failure, and refreshes later", async () => {
+    vi.useFakeTimers();
+    fetchMock
+      .mockImplementationOnce(() => jsonResponse(PENDING_DRAWS))
+      .mockImplementationOnce(() =>
+        jsonResponse(
+          { error: { code: "INTERNAL_ERROR", message: "Unable to load draws." } },
+          { status: 500 },
+        ),
+      )
+      .mockImplementationOnce(() => jsonResponse(REVEALED_DRAWS));
+
+    render(<PublicDrawPage />);
+    await flushRequests();
+    expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(
+      screen.getByText("01", { selector: ".draw-winning-number" }),
+    ).toBeInTheDocument();
+  });
+
+  it("pauses polling while hidden and clears polling on unmount", async () => {
+    vi.useFakeTimers();
+    let visibilityState: DocumentVisibilityState = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(
+      () => visibilityState,
+    );
+    fetchMock.mockImplementation(() => jsonResponse(PENDING_DRAWS));
+
+    const { unmount } = render(<PublicDrawPage />);
+    await flushRequests();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    visibilityState = "hidden";
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    visibilityState = "visible";
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

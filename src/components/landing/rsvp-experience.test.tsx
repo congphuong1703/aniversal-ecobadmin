@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -26,6 +32,17 @@ const SUBMISSION = {
   clientSubmissionId: "10000000-0000-4000-8000-000000000001",
   createdAt: "2026-07-29T02:00:00.000Z",
 };
+
+const VERIFICATION = {
+  verificationToken: "signed-guest-01-token",
+  guest: {
+    id: "guest-01",
+    maskedName: "Nguyễn V*** A*",
+    imagePath: "/guests/guest-01.svg",
+  },
+};
+
+const LUCKY_NUMBERS = [12, 1, 22, 53, 52] as const;
 
 const fetchMock = vi.fn<typeof fetch>();
 const randomUuid = vi.fn();
@@ -126,7 +143,7 @@ describe("RsvpExperience", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("submits an attending response directly from the confirmation popup", async () => {
+  it("verifies an attending guest and shows five fixed lucky numbers", async () => {
     mockGuestLoad();
     const user = userEvent.setup();
     render(<RsvpExperience />);
@@ -135,10 +152,12 @@ describe("RsvpExperience", () => {
       screen.getByLabelText(/Lời nhắn cho EcoBadminton/i),
       "Hẹn gặp cả đội!",
     );
+    fetchMock.mockImplementationOnce(() => jsonResponse(VERIFICATION));
     fetchMock.mockImplementationOnce(() =>
       jsonResponse({
         submission: { ...SUBMISSION, message: "Hẹn gặp cả đội!" },
         deduplicated: false,
+        luckyNumbers: LUCKY_NUMBERS,
       }),
     );
 
@@ -156,18 +175,95 @@ describe("RsvpExperience", () => {
     expect(successActions?.lastElementChild).toHaveTextContent(
       "Mở Google Maps",
     );
-    const body = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
-      guestId: string;
+
+    const luckyNumberList = screen.getByRole("list", {
+      name: /năm số may mắn cố định/i,
+    });
+    expect(luckyNumberList).toHaveTextContent("12");
+    expect(luckyNumberList).toHaveTextContent("01");
+    expect(luckyNumberList).toHaveTextContent("22");
+    expect(luckyNumberList).toHaveTextContent("53");
+    expect(luckyNumberList).toHaveTextContent("52");
+    expect(luckyNumberList.querySelectorAll(".lucky-number-circle")).toHaveLength(
+      5,
+    );
+  });
+
+  it("submits an attending response with a verification token instead of a guest ID", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    render(<RsvpExperience />);
+    await selectFirstGuest(user);
+    fetchMock.mockImplementationOnce(() => jsonResponse(VERIFICATION));
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        submission: SUBMISSION,
+        deduplicated: false,
+        luckyNumbers: LUCKY_NUMBERS,
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tham gia" }));
+    expect(await screen.findByText(/Hẹn gặp bạn vào/i)).toBeInTheDocument();
+
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/rsvp/verify");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      guestId: "guest-01",
+      name: "Nguyễn Văn An",
+    });
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("/api/rsvp");
+    const body = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body)) as {
+      verificationToken: string;
       attending: boolean;
-      message: string;
+      message: null;
       clientSubmissionId: string;
+      guestId?: string;
     };
     expect(body).toEqual({
-      guestId: "guest-01",
+      verificationToken: "signed-guest-01-token",
       attending: true,
-      message: "Hẹn gặp cả đội!",
+      message: null,
       clientSubmissionId: "10000000-0000-4000-8000-000000000001",
     });
+    expect(body).not.toHaveProperty("guestId");
+  });
+
+  it("reuses the verification token when an attending submission is retried", async () => {
+    mockGuestLoad();
+    const user = userEvent.setup();
+    render(<RsvpExperience />);
+    await selectFirstGuest(user);
+    fetchMock.mockImplementationOnce(() => jsonResponse(VERIFICATION));
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse(
+        { error: { code: "INTERNAL_ERROR", message: "Unable to save RSVP." } },
+        { status: 500 },
+      ),
+    );
+    fetchMock.mockImplementationOnce(() =>
+      jsonResponse({
+        submission: SUBMISSION,
+        deduplicated: true,
+        luckyNumbers: LUCKY_NUMBERS,
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tham gia" }));
+    expect(await screen.findByRole("button", { name: "Thử gửi lại" })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: /năm số may mắn/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Thử gửi lại" }));
+    expect(await screen.findByText(/Hẹn gặp bạn vào/i)).toBeInTheDocument();
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls.filter(([url]) => url === "/api/rsvp/verify")).toHaveLength(1);
+    for (const callIndex of [2, 3]) {
+      expect(JSON.parse(String(fetchMock.mock.calls[callIndex]?.[1]?.body))).toMatchObject({
+        verificationToken: "signed-guest-01-token",
+        attending: true,
+        clientSubmissionId: "10000000-0000-4000-8000-000000000001",
+      });
+    }
   });
 
   it("moves the decline button five times before enabling it", async () => {
@@ -212,8 +308,16 @@ describe("RsvpExperience", () => {
     ).not.toBeInTheDocument();
     const body = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
       attending: boolean;
+      guestId: string;
+      verificationToken?: string;
     };
     expect(body.attending).toBe(false);
+    expect(body.guestId).toBe("guest-01");
+    expect(body).not.toHaveProperty("verificationToken");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/rsvp");
+    expect(
+      screen.queryByRole("list", { name: /năm số may mắn/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a warm decline message when the guest leaves a note", async () => {
@@ -272,12 +376,13 @@ describe("RsvpExperience", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("locks the popup while a direct submission is pending", async () => {
+  it("locks the popup while an attending submission is pending", async () => {
     mockGuestLoad();
     const user = userEvent.setup();
     let resolveSubmission!: (response: Response) => void;
     render(<RsvpExperience />);
     await selectFirstGuest(user);
+    fetchMock.mockImplementationOnce(() => jsonResponse(VERIFICATION));
     fetchMock.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
@@ -287,7 +392,7 @@ describe("RsvpExperience", () => {
 
     await user.click(screen.getByRole("button", { name: "Tham gia" }));
 
-    const loadingButton = screen.getByRole("button", { name: /đang gửi/i });
+    const loadingButton = await screen.findByRole("button", { name: /đang gửi/i });
     expect(loadingButton).toBeDisabled();
     expect(
       screen.getByLabelText(/Lời nhắn cho EcoBadminton/i),
@@ -296,10 +401,15 @@ describe("RsvpExperience", () => {
 
     resolveSubmission(
       new Response(
-        JSON.stringify({ submission: SUBMISSION, deduplicated: false }),
+        JSON.stringify({
+          submission: SUBMISSION,
+          deduplicated: false,
+          luckyNumbers: LUCKY_NUMBERS,
+        }),
         { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
     expect(await screen.findByText(/Hẹn gặp bạn vào/i)).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
   });
 });
