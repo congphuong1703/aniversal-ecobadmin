@@ -81,6 +81,13 @@ test("keeps draws admin-only and reveals each of five rounds to the public page"
   const adminPage = await page.context().newPage();
 
   await publicPage.goto("/quay-trung-thuong");
+  await expect(publicPage.getByRole("link", { name: "Quay lại" })).toHaveAttribute(
+    "href",
+    "/#top",
+  );
+  await expect(
+    publicPage.getByRole("link", { name: "Quay trúng thưởng" }),
+  ).toHaveCount(0);
   await expect(publicPage.getByText("Chưa có giải nào được mở.")).toBeVisible();
   await expect(publicPage.getByText("Chờ quay")).toHaveCount(5);
 

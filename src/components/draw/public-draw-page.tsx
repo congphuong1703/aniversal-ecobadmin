@@ -13,7 +13,7 @@ const POLL_INTERVAL_MS = 2_000;
 const RULES = [
   "Chỉ khách đã xác nhận tham dự mới được tham gia quay thưởng.",
   "Mỗi khách tham dự nhận 5 số may mắn khác nhau trong khoảng 00–99.",
-  "Mỗi lượt, admin sẽ quay ngẫu nhiên một giải chưa được mở.",
+  "Mỗi lượt, ban tổ chức sẽ quay ngẫu nhiên một giải chưa được mở.",
   "Mỗi hạng giải chỉ được quay một lần và số trúng không lặp lại.",
   "Tất cả khách sở hữu số trúng sẽ nhận hạng giải tương ứng.",
   "Kết quả đã công bố trên trang này là kết quả chính thức.",
@@ -148,14 +148,11 @@ export function PublicDrawPage() {
         </nav>
         <div className="draw-page-intro draw-page-heading">
           <div>
-            <span className="eyebrow">Sân khấu may mắn · Admin điều khiển</span>
+            <span className="eyebrow">Sân khấu may mắn · Ban tổ chức điều khiển</span>
             <h1 className="font-display" id="draw-page-title">
               Quay trúng thưởng
             </h1>
           </div>
-          <p>
-            Cùng theo dõi năm lượt quay và tìm con số may mắn của mình.
-          </p>
         </div>
         <div
           className="draw-progress"
@@ -177,7 +174,7 @@ export function PublicDrawPage() {
             ))}
           </ol>
           <p className="draw-info-note">
-            Admin là người duy nhất được quay thưởng; tất cả khách có cùng số trúng sẽ nhận
+            Ban tổ chức là người duy nhất được quay thưởng; tất cả khách có cùng số trúng sẽ nhận
             hạng giải tương ứng.
           </p>
           <p className="draw-info-note">
@@ -201,7 +198,7 @@ export function PublicDrawPage() {
             Cách kiểm tra
           </h2>
           <p>
-            Trong thẻ xác nhận RSVP thành công, hãy xem 5 số may mắn của bạn; sau đó so sánh
+            Trong thẻ xác nhận thành công, hãy xem 5 số may mắn của bạn; sau đó so sánh
             từng số với các kết quả đã công bố bên dưới.
           </p>
         </section>

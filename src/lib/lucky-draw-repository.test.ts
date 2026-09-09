@@ -20,11 +20,11 @@ import {
 
 const SCOPE = "draw-repository-test";
 const EXPECTED_REWARDS = [
-  "Quà tặng đặc biệt · Nội dung sẽ cập nhật",
-  "Voucher mua sắm · Demo",
-  "Bộ quà EcoBadminton · Demo",
-  "Áo / phụ kiện CLB · Demo",
-  "Quà vui cuối chương trình · Demo",
+  "Công bố sau",
+  "Công bố sau",
+  "Công bố sau",
+  "Công bố sau",
+  "Công bố sau",
 ] as const;
 
 function numbers(values: number[]) {

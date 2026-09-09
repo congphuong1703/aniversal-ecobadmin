@@ -1571,6 +1571,7 @@ button.button-ghost {
   font-size: clamp(2rem, 5vw, 4rem);
   font-weight: 500;
   line-height: 0.9;
+  white-space: nowrap;
 }
 
 .draw-info-block ol {

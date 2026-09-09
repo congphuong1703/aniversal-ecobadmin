@@ -12,35 +12,35 @@ const PENDING_DRAWS = {
       prizeRank: 1,
       prizeKey: "special",
       label: "Giải đặc biệt",
-      reward: "Quà tặng đặc biệt · Nội dung sẽ cập nhật",
+      reward: "Công bố sau",
       result: null,
     },
     {
       prizeRank: 2,
       prizeKey: "second",
       label: "Giải nhì",
-      reward: "Voucher mua sắm · Demo",
+      reward: "Công bố sau",
       result: null,
     },
     {
       prizeRank: 3,
       prizeKey: "third",
       label: "Giải ba",
-      reward: "Bộ quà EcoBadminton · Demo",
+      reward: "Công bố sau",
       result: null,
     },
     {
       prizeRank: 4,
       prizeKey: "fourth",
       label: "Giải tư",
-      reward: "Áo / phụ kiện CLB · Demo",
+      reward: "Công bố sau",
       result: null,
     },
     {
       prizeRank: 5,
       prizeKey: "fifth",
       label: "Giải năm",
-      reward: "Quà vui cuối chương trình · Demo",
+      reward: "Công bố sau",
       result: null,
     },
   ],
@@ -102,6 +102,9 @@ describe("PublicDrawPage", () => {
     expect(styles).toMatch(
       /\.draw-info-block > \.eyebrow,[\s\S]*?\.draw-info-block > h2,[\s\S]*?\.draw-info-block > ol,[\s\S]*?\.draw-info-block > p:not\(\.draw-info-note\),[\s\S]*?\.draw-info-block > \.draw-info-note\s*\{\s*grid-column: auto;\s*grid-row: auto;/,
     );
+    expect(styles).toMatch(
+      /\.draw-info-block h2,\s*\.draw-results-heading h2\s*\{[^}]*white-space:\s*nowrap;/,
+    );
     expect(styles).toMatch(/\.draw-anchor-nav a:hover\s*\{[\s\S]*?color:/);
   });
 
@@ -125,22 +128,29 @@ describe("PublicDrawPage", () => {
       screen.getByRole("heading", { name: "Cách kiểm tra" }).closest("section"),
     ).toHaveAttribute("id", "cach-kiem-tra");
     expect(
-      screen.getByText(/thẻ xác nhận RSVP thành công.*5 số may mắn/i),
+      screen.getByText("Sân khấu may mắn · Ban tổ chức điều khiển"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("Mỗi lượt, ban tổ chức sẽ quay ngẫu nhiên một giải chưa được mở."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/admin/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/trong thẻ xác nhận thành công.*5 số may mắn/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/thẻ xác nhận RSVP thành công/i)).not.toBeInTheDocument();
     expect(screen.getByText(/so sánh.*kết quả.*công bố/i)).toBeInTheDocument();
     expect(screen.getByText("Đã mở 0/5 giải")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: /tiến trình quay/i })).toHaveAttribute(
       "aria-live",
       "polite",
     );
-    expect(screen.getByText(/admin là người duy nhất được quay/i)).toBeInTheDocument();
+    expect(screen.getByText(/ban tổ chức là người duy nhất được quay/i)).toBeInTheDocument();
+    expect(screen.queryByText(/admin là người duy nhất được quay/i)).not.toBeInTheDocument();
     expect(screen.getByText(/tất cả khách có cùng số trúng/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Cùng theo dõi năm lượt quay/i)).not.toBeInTheDocument();
     expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
-    expect(screen.getByText("Quà tặng đặc biệt · Nội dung sẽ cập nhật")).toBeInTheDocument();
-    expect(screen.getByText("Voucher mua sắm · Demo")).toBeInTheDocument();
-    expect(screen.getByText("Bộ quà EcoBadminton · Demo")).toBeInTheDocument();
-    expect(screen.getByText("Áo / phụ kiện CLB · Demo")).toBeInTheDocument();
-    expect(screen.getByText("Quà vui cuối chương trình · Demo")).toBeInTheDocument();
+    expect(screen.getAllByText("Công bố sau")).toHaveLength(5);
+    expect(screen.queryByText(/· Demo|nội dung sẽ cập nhật/i)).not.toBeInTheDocument();
     expect(screen.getByText(/chưa có giải nào được mở/i)).toBeInTheDocument();
     expect(screen.queryByText(/nội bộ|pháp lý/i)).not.toBeInTheDocument();
   });
