@@ -19,10 +19,14 @@ describe("Story", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Đặc biệt:")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Với thành viên từ EcoRun, chúng mình tặng bạn gói dùng thử đến hết 30/9 này. Hãy nhanh tay nhấn vào đây để trải nghiệm ngay thôi!",
-      ),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "vào đây" }).closest("p"),
+    ).toHaveTextContent(
+      "Với thành viên từ EcoRun, chúng mình tặng bạn gói dùng thử đến hết 30/9 này. Hãy nhanh tay nhấn vào đây để trải nghiệm ngay thôi!",
+    );
+    expect(screen.getByRole("link", { name: "vào đây" })).toHaveAttribute(
+      "href",
+      "/#rsvp",
+    );
     expect(
       screen.getByAltText("Minh hoạ EcoTek và quả cầu lông cùng mời bạn tham gia"),
     ).toHaveAttribute("src", expect.stringContaining("invite-ecotek.jpg"));

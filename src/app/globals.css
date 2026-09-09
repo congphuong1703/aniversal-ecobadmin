@@ -3942,6 +3942,18 @@ button.button-ghost {
   color: var(--primary);
 }
 
+.story-invite-promise a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.16em;
+}
+
+.story-invite-promise a:hover {
+  color: var(--navy);
+}
+
 .story-invite-button {
   margin-top: 2rem;
   background: var(--navy);

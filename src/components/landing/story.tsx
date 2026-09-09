@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import {
   StoryGallery,
@@ -441,7 +442,8 @@ function StoryInvite() {
           </p>
           <p className="story-invite-promise">
             <strong>Đặc biệt:</strong> Với thành viên từ EcoRun, chúng mình tặng bạn gói dùng
-            thử đến hết 30/9 này. Hãy nhanh tay nhấn vào đây để trải nghiệm ngay thôi!
+            thử đến hết 30/9 này. Hãy nhanh tay nhấn <Link href="/#rsvp">vào đây</Link> để
+            trải nghiệm ngay thôi!
           </p>
         </div>
       </div>
