@@ -11,7 +11,6 @@ import { formatLuckyNumber } from "@/lib/lucky-number-format";
 const POLL_INTERVAL_MS = 2_000;
 
 const RULES = [
-  "Chỉ khách đã xác nhận tham dự mới được tham gia quay thưởng.",
   "Mỗi khách tham dự nhận 5 số may mắn khác nhau trong khoảng 00–99.",
   "Mỗi lượt, ban tổ chức sẽ quay ngẫu nhiên một giải chưa được mở.",
   "Mỗi hạng giải chỉ được quay một lần và số trúng không lặp lại.",
@@ -164,7 +163,6 @@ export function PublicDrawPage() {
           <span>{drawProgressLabel(revealedCount)}</span>
         </div>
         <section id="the-le" className="draw-info-block" aria-labelledby="draw-rules-title">
-          <span className="eyebrow">Minh bạch từ lượt đầu tiên</span>
           <h2 className="font-display" id="draw-rules-title">
             Thể lệ tham gia
           </h2>
@@ -182,7 +180,6 @@ export function PublicDrawPage() {
           </p>
         </section>
         <section id="giai-thuong" className="draw-info-block" aria-labelledby="draw-prizes-title">
-          <span className="eyebrow">Năm cơ hội</span>
           <h2 className="font-display" id="draw-prizes-title">
             Giải thưởng
           </h2>
@@ -193,7 +190,6 @@ export function PublicDrawPage() {
           className="draw-info-block"
           aria-labelledby="draw-check-title"
         >
-          <span className="eyebrow">Đối chiếu thật dễ</span>
           <h2 className="font-display" id="draw-check-title">
             Cách kiểm tra
           </h2>

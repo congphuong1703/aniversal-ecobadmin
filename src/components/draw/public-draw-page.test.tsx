@@ -124,6 +124,12 @@ describe("PublicDrawPage", () => {
     expect(screen.getByRole("link", { name: "Kết quả" })).toHaveAttribute("href", "#ket-qua");
     expect(screen.getByRole("heading", { name: "Thể lệ tham gia" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Giải thưởng" })).toBeInTheDocument();
+    expect(screen.queryByText("Minh bạch từ lượt đầu tiên")).not.toBeInTheDocument();
+    expect(screen.queryByText("Năm cơ hội")).not.toBeInTheDocument();
+    expect(screen.queryByText("Đối chiếu thật dễ")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Chỉ khách đã xác nhận tham dự mới được tham gia quay thưởng."),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Cách kiểm tra" }).closest("section"),
     ).toHaveAttribute("id", "cach-kiem-tra");

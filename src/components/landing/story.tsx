@@ -434,16 +434,14 @@ function StoryInvite() {
         </div>
         <div className="story-invite-content reveal reveal-delay">
           <h2 className="font-display" id="story-invite-title">
-            EcoBadminton - nói KHÔNG với:
+            Thêm một người bạn, thêm một trận cầu
           </h2>
-          <ul className="story-invite-list">
-            <li>Phí tham gia nhóm</li>
-            <li>Phí phạt</li>
-            <li>Phí rời nhóm</li>
-          </ul>
           <p className="story-invite-promise">
-            Giờ đây, bạn có thể yên tâm <strong>THAM GIA</strong> cùng chúng
-            mình rồi nè!
+            Ở EcoBadminton, chúng mình luôn chào đón các thành viên mới.
+          </p>
+          <p className="story-invite-promise">
+            <strong>Đặc biệt:</strong> Với thành viên từ EcoRun, chúng mình tặng bạn gói dùng
+            thử đến hết 30/9 này. Hãy nhanh tay nhấn vào đây để trải nghiệm ngay thôi!
           </p>
         </div>
       </div>
