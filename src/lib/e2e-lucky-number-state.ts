@@ -9,6 +9,10 @@ import type {
   LuckyDrawPersistenceAdapter,
   LuckyDrawResultRow,
 } from "@/lib/lucky-draw-repository";
+import {
+  clearE2eRsvpStatus,
+  getE2eAttendingGuestIds,
+} from "@/lib/e2e-rsvp-status";
 
 type MemoryStore = {
   rows: LuckyNumberAssignmentRow[];
@@ -41,6 +45,7 @@ function getStore(scope: string) {
 }
 
 export function resetE2eLuckyNumberState(scope: string) {
+  clearE2eRsvpStatus(scope);
   stores().set(scope, {
     rows: [],
     drawRows: [],
@@ -77,7 +82,12 @@ export function getE2eLuckyNumberPersistence(
     },
 
     async listAssignments() {
-      return getE2eLuckyNumberState(scope);
+      const assignments = await getE2eLuckyNumberState(scope);
+      const attendingGuestIds = getE2eAttendingGuestIds(scope);
+
+      return attendingGuestIds
+        ? assignments.filter(({ guest_id }) => attendingGuestIds.has(guest_id))
+        : assignments;
     },
   };
 }
@@ -87,7 +97,12 @@ export function getE2eLuckyDrawPersistence(
 ): LuckyDrawPersistenceAdapter {
   return {
     async listAssignments() {
-      return getE2eLuckyNumberState(scope);
+      const assignments = await getE2eLuckyNumberState(scope);
+      const attendingGuestIds = getE2eAttendingGuestIds(scope);
+
+      return attendingGuestIds
+        ? assignments.filter(({ guest_id }) => attendingGuestIds.has(guest_id))
+        : assignments;
     },
 
     async listResults() {

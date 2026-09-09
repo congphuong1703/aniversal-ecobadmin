@@ -3,7 +3,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { DRAW_PRIZES } from "@/data/draw-prizes";
-import { getE2eLuckyDrawPersistence, getE2eLuckyNumberPersistence, resetE2eLuckyNumberState } from "./e2e-lucky-number-state";
+import {
+  getE2eLuckyDrawPersistence,
+  getE2eLuckyNumberPersistence,
+  resetE2eLuckyNumberState,
+} from "./e2e-lucky-number-state";
+import {
+  getE2eRsvpPersistence,
+  resetE2eRsvpState,
+} from "./e2e-rsvp-repository";
 import {
   AllPrizesDrawnError,
   NoEligibleLuckyNumberError,
@@ -129,6 +137,39 @@ describe("Lucky draw repository", () => {
     await expect(repository().drawNext()).rejects.toBeInstanceOf(
       NoEligibleLuckyNumberError,
     );
+  });
+
+  it("counts and maps only guests whose latest RSVP is attending", async () => {
+    resetE2eRsvpState(SCOPE);
+    const rsvp = getE2eRsvpPersistence(SCOPE);
+    await rsvp.insertSubmission({
+      guest_id: "guest-01",
+      attending: true,
+      message: null,
+      client_submission_id: "10000000-0000-4000-8000-000000000001",
+    });
+    await rsvp.insertSubmission({
+      guest_id: "guest-02",
+      attending: true,
+      message: null,
+      client_submission_id: "10000000-0000-4000-8000-000000000002",
+    });
+    await rsvp.insertSubmission({
+      guest_id: "guest-02",
+      attending: false,
+      message: null,
+      client_submission_id: "10000000-0000-4000-8000-000000000003",
+    });
+    await seedAssignments([
+      { guest_id: "guest-01", numbers: [10, 11, 12, 13, 14] },
+      { guest_id: "guest-02", numbers: [10, 11, 12, 13, 14] },
+    ]);
+
+    await expect(repository().drawNext()).resolves.toMatchObject({
+      prizeRank: 1,
+      winningNumber: 10,
+      winners: ["Mads Werner"],
+    });
   });
 
   it("serializes concurrent draws so only one result is created for a rank", async () => {

@@ -1476,10 +1476,16 @@ button.button-ghost {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  transition: color 180ms ease;
+}
+
+.draw-anchor-nav a:hover {
+  color: var(--primary);
 }
 
 #the-le,
 #giai-thuong,
+#cach-kiem-tra,
 #ket-qua {
   scroll-margin-top: 5rem;
 }

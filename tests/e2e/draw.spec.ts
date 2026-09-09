@@ -49,7 +49,9 @@ async function expectPublicDrawToReveal(
 ) {
   const revealedCard = page
     .locator(".draw-card.is-revealed")
-    .filter({ hasText: expectedNumber })
+    .filter({
+      has: page.locator(".draw-winning-number", { hasText: expectedNumber }),
+    })
     .filter({ hasText: expectedWinner });
   await expect(revealedCard).toHaveCount(1);
   await expect(revealedCard.locator(".draw-winning-number")).toHaveText(

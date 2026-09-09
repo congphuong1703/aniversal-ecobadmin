@@ -143,6 +143,7 @@ export function PublicDrawPage() {
         <nav aria-label="Điều hướng quay thưởng" className="draw-anchor-nav">
           <a href="#the-le">Thể lệ</a>
           <a href="#giai-thuong">Giải thưởng</a>
+          <a href="#cach-kiem-tra">Cách kiểm tra</a>
           <a href="#ket-qua">Kết quả</a>
         </nav>
         <div className="draw-page-intro draw-page-heading">
@@ -189,6 +190,20 @@ export function PublicDrawPage() {
             Giải thưởng
           </h2>
           <p>Hạng giải sẽ được hệ thống chọn ngẫu nhiên ở mỗi lượt quay.</p>
+        </section>
+        <section
+          id="cach-kiem-tra"
+          className="draw-info-block"
+          aria-labelledby="draw-check-title"
+        >
+          <span className="eyebrow">Đối chiếu thật dễ</span>
+          <h2 className="font-display" id="draw-check-title">
+            Cách kiểm tra
+          </h2>
+          <p>
+            Trong thẻ xác nhận RSVP thành công, hãy xem 5 số may mắn của bạn; sau đó so sánh
+            từng số với các kết quả đã công bố bên dưới.
+          </p>
         </section>
         <div id="ket-qua" className="draw-results-heading">
           <span className="eyebrow">Cập nhật trực tiếp</span>

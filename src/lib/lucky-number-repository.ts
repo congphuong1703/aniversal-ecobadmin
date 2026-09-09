@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { GuestRecord } from "@/data/guests";
 import { GUESTS } from "@/data/guests";
 import { getE2eLuckyNumberPersistence } from "@/lib/e2e-lucky-number-state";
+import { listAttendingGuestIds } from "@/lib/latest-rsvp";
 import { isE2eMemoryRepositoryEnabled } from "@/lib/e2e-mode";
 import { getGuestDirectory } from "@/lib/guest-directory";
 import {
@@ -177,9 +178,12 @@ const supabasePersistence: LuckyNumberPersistenceAdapter = {
       throw persistenceError("list", error);
     }
 
-    return z.array(luckyNumberAssignmentRowSchema)
+    const assignments = z.array(luckyNumberAssignmentRowSchema)
       .parse(data ?? [])
       .map(parseAssignment);
+    const attendingGuestIds = await listAttendingGuestIds();
+
+    return assignments.filter(({ guest_id }) => attendingGuestIds.has(guest_id));
   },
 };
 

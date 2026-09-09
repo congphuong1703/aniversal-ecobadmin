@@ -102,6 +102,7 @@ describe("PublicDrawPage", () => {
     expect(styles).toMatch(
       /\.draw-info-block > \.eyebrow,[\s\S]*?\.draw-info-block > h2,[\s\S]*?\.draw-info-block > ol,[\s\S]*?\.draw-info-block > p:not\(\.draw-info-note\),[\s\S]*?\.draw-info-block > \.draw-info-note\s*\{\s*grid-column: auto;\s*grid-row: auto;/,
     );
+    expect(styles).toMatch(/\.draw-anchor-nav a:hover\s*\{[\s\S]*?color:/);
   });
 
   it("renders information sections, pending prizes, and reward details", async () => {
@@ -113,9 +114,20 @@ describe("PublicDrawPage", () => {
     expect(screen.getByRole("navigation", { name: "Điều hướng quay thưởng" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Thể lệ" })).toHaveAttribute("href", "#the-le");
     expect(screen.getByRole("link", { name: "Giải thưởng" })).toHaveAttribute("href", "#giai-thuong");
+    expect(screen.getByRole("link", { name: "Cách kiểm tra" })).toHaveAttribute(
+      "href",
+      "#cach-kiem-tra",
+    );
     expect(screen.getByRole("link", { name: "Kết quả" })).toHaveAttribute("href", "#ket-qua");
     expect(screen.getByRole("heading", { name: "Thể lệ tham gia" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Giải thưởng" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Cách kiểm tra" }).closest("section"),
+    ).toHaveAttribute("id", "cach-kiem-tra");
+    expect(
+      screen.getByText(/thẻ xác nhận RSVP thành công.*5 số may mắn/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/so sánh.*kết quả.*công bố/i)).toBeInTheDocument();
     expect(screen.getByText("Đã mở 0/5 giải")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: /tiến trình quay/i })).toHaveAttribute(
       "aria-live",

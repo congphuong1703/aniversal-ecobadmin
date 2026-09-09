@@ -19,6 +19,7 @@ import { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 import { rsvpMessageSchema } from "@/lib/rsvp-schema";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { LuckyNumbers } from "@/lib/lucky-number";
+import { compareRsvpRecency } from "@/lib/latest-rsvp";
 
 export { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 
@@ -209,29 +210,8 @@ function mapSubmission(row: RsvpSubmissionRow): RsvpSubmission {
   };
 }
 
-function timestampToMicroseconds(timestamp: string) {
-  const match = /^(.*?)(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(timestamp);
-
-  if (!match) {
-    throw new Error(`Invalid timestamp: ${timestamp}`);
-  }
-
-  const [, wholeSecond, fraction = "", offset] = match;
-  const milliseconds = Date.parse(`${wholeSecond}${offset}`);
-  const microseconds = fraction.padEnd(6, "0").slice(0, 6);
-
-  return BigInt(milliseconds) * BigInt(1000) + BigInt(microseconds || "0");
-}
-
 function newestFirst(left: RsvpSubmissionRow, right: RsvpSubmissionRow) {
-  const leftTimestamp = timestampToMicroseconds(left.created_at);
-  const rightTimestamp = timestampToMicroseconds(right.created_at);
-
-  if (leftTimestamp !== rightTimestamp) {
-    return leftTimestamp > rightTimestamp ? -1 : 1;
-  }
-
-  return right.id.localeCompare(left.id);
+  return compareRsvpRecency(right, left);
 }
 
 export function createRsvpRepository(

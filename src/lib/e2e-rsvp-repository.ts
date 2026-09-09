@@ -6,6 +6,10 @@ import type {
   RsvpSubmissionRow,
 } from "@/lib/rsvp-repository";
 import { resetE2eLuckyNumberState } from "@/lib/e2e-lucky-number-state";
+import {
+  recordE2eRsvpStatus,
+  resetE2eRsvpStatus,
+} from "@/lib/e2e-rsvp-status";
 import { SubmissionIdConflictError } from "@/lib/rsvp-errors";
 
 type MemoryStore = {
@@ -67,6 +71,7 @@ export function resetE2eRsvpState(
   }
 
   stores().set(scope, store);
+  resetE2eRsvpStatus(scope, store.rows);
 }
 
 export async function getE2eRsvpState(scope: string) {
@@ -99,6 +104,7 @@ export function getE2eRsvpPersistence(scope: string): RsvpPersistenceAdapter {
 
     const row = createDeterministicRow(store, input);
     store.rows.push(row);
+    recordE2eRsvpStatus(scope, row);
     return { row, deduplicated: false };
   }
 

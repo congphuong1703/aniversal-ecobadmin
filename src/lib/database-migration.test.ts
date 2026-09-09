@@ -9,6 +9,7 @@ let migration = "";
 let luckyNumberMigration = "";
 let luckyDrawMigration = "";
 let randomizedLuckyDrawMigration = "";
+let activeRsvpLuckyDrawMigration = "";
 
 describe("Supabase migration", () => {
   beforeAll(async () => {
@@ -43,6 +44,15 @@ describe("Supabase migration", () => {
       fileURLToPath(
         new URL(
           "../../supabase/migrations/202609080003_randomize_lucky_prize_order.sql",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    activeRsvpLuckyDrawMigration = await readFile(
+      fileURLToPath(
+        new URL(
+          "../../supabase/migrations/202609080004_filter_lucky_draw_to_active_rsvps.sql",
           import.meta.url,
         ),
       ),
@@ -105,6 +115,34 @@ describe("Supabase migration", () => {
     );
     expect(randomizedLuckyDrawMigration).toMatch(
       /grant execute on function public\.draw_next_lucky_prize\(\) to service_role/i,
+    );
+  });
+
+  it("filters lucky draws to the latest attending RSVP per guest", () => {
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /select distinct on \(guest_id\)[\s\S]*from public\.rsvp_submissions[\s\S]*order by guest_id, created_at desc, id desc/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(/latest_rsvp\.attending\s*=\s*true/i);
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /from public\.lucky_number_assignments as assignment[\s\S]*join latest_rsvp/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /pg_advisory_xact_lock\(hashtextextended\('lucky-draw-next-prize', 0\)\)/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /revoke execute on function public\.draw_next_lucky_prize\(\) from public, anon, authenticated/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /grant execute on function public\.draw_next_lucky_prize\(\) to service_role/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /result\.winning_number = owned\.number/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /when next_rank = 1 then owned\.owner_count = 1[\s\S]*else owned\.owner_count <= next_rank/i,
+    );
+    expect(activeRsvpLuckyDrawMigration).toMatch(
+      /raise exception 'ALL_PRIZES_DRAWN'[\s\S]*raise exception 'NO_ELIGIBLE_LUCKY_NUMBER'/i,
     );
   });
 });
