@@ -17,16 +17,16 @@ export function AchievementSlide() {
             <div className="achievement-slide-group">
               <h3>EcoBadminton</h3>
               <ul>
-                <li>1 năm cùng nhau ra sân.</li>
-                <li>1 hành trình cùng nhau tiến bộ.</li>
-                <li>1 tập thể cùng nhau gắn kết.</li>
+                <li>1 Năm cùng nhau ra sân.</li>
+                <li>1 Hành trình cùng nhau tiến bộ.</li>
+                <li>1 Tập thể cùng nhau gắn kết.</li>
               </ul>
             </div>
             <div className="achievement-slide-group achievement-slide-group-sponsor">
               <h3>EcoRun</h3>
               <ul>
-                <li>1 người bạn đồng hành.</li>
-                <li>1 đối thủ trên sân.</li>
+                <li>1 Người bạn đồng hành.</li>
+                <li>1 Đối thủ cùng nhau thử thách.</li>
                 <li>1 Nhà tài trợ Kim cương trong dịp kỷ niệm đặc biệt này.</li>
               </ul>
             </div>

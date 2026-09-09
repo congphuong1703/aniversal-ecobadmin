@@ -8,15 +8,17 @@ describe("AchievementSlide", () => {
     render(<AchievementSlide />);
 
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("1 năm cùng nhau ra sân.")).toBeInTheDocument();
+    expect(screen.getByText("1 Năm cùng nhau ra sân.")).toBeInTheDocument();
     expect(
-      screen.getByText("1 hành trình cùng nhau tiến bộ."),
+      screen.getByText("1 Hành trình cùng nhau tiến bộ."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("1 tập thể cùng nhau gắn kết."),
+      screen.getByText("1 Tập thể cùng nhau gắn kết."),
     ).toBeInTheDocument();
-    expect(screen.getByText("1 người bạn đồng hành.")).toBeInTheDocument();
-    expect(screen.getByText("1 đối thủ trên sân.")).toBeInTheDocument();
+    expect(screen.getByText("1 Người bạn đồng hành.")).toBeInTheDocument();
+    expect(
+      screen.getByText("1 Đối thủ cùng nhau thử thách."),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "1 Nhà tài trợ Kim cương trong dịp kỷ niệm đặc biệt này.",
