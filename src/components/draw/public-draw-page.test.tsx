@@ -150,9 +150,12 @@ describe("PublicDrawPage", () => {
       "aria-live",
       "polite",
     );
-    expect(screen.getByText(/ban tổ chức là người duy nhất được quay/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ban tổ chức là người duy nhất được quay/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/admin là người duy nhất được quay/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/tất cả khách có cùng số trúng/i)).toBeInTheDocument();
+    expect(screen.queryByText(/tất cả khách có cùng số trúng/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/giải thưởng hiện đang là nội dung demo/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Cùng theo dõi năm lượt quay/i)).not.toBeInTheDocument();
     expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
     expect(screen.getAllByText("Công bố sau")).toHaveLength(5);

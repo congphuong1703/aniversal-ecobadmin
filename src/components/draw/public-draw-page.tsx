@@ -171,13 +171,6 @@ export function PublicDrawPage() {
               <li key={rule}>{rule}</li>
             ))}
           </ol>
-          <p className="draw-info-note">
-            Ban tổ chức là người duy nhất được quay thưởng; tất cả khách có cùng số trúng sẽ nhận
-            hạng giải tương ứng.
-          </p>
-          <p className="draw-info-note">
-            Giải thưởng hiện đang là nội dung demo và sẽ được ban tổ chức cập nhật.
-          </p>
         </section>
         <section id="giai-thuong" className="draw-info-block" aria-labelledby="draw-prizes-title">
           <h2 className="font-display" id="draw-prizes-title">
