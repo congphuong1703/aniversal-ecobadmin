@@ -1,0 +1,136 @@
+alter table public.lucky_draw_results
+  add column if not exists supplemental_guest_ids text[] not null default '{}'::text[];
+
+create or replace function public.draw_next_lucky_prize()
+returns public.lucky_draw_results
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  next_rank smallint;
+  selected_number smallint;
+  base_winner_count integer;
+  supplemental_guest_ids text[] := '{}'::text[];
+  inserted_result public.lucky_draw_results;
+begin
+  perform pg_advisory_xact_lock(hashtextextended('lucky-draw-next-prize', 0));
+
+  select candidate.rank::smallint
+    into next_rank
+    from generate_series(1, 5) as candidate(rank)
+   where not exists (
+           select 1
+             from public.lucky_draw_results as result
+            where result.prize_rank = candidate.rank
+         )
+   order by random()
+   limit 1;
+
+  if next_rank is null then
+    raise exception 'ALL_PRIZES_DRAWN' using errcode = 'P0001';
+  end if;
+
+  with latest_rsvp as (
+    select distinct on (guest_id)
+           guest_id,
+           attending
+      from public.rsvp_submissions
+     order by guest_id, created_at desc, id desc
+  )
+  select owned.number
+    into selected_number
+    from (
+      select u.number::smallint as number,
+             count(distinct assignment.guest_id)::integer as owner_count
+        from public.lucky_number_assignments as assignment
+        join latest_rsvp
+          on latest_rsvp.guest_id = assignment.guest_id
+         and latest_rsvp.attending = true
+        cross join lateral unnest(assignment.numbers) as u(number)
+       group by u.number
+    ) as owned
+   where not exists (
+           select 1
+             from public.lucky_draw_results as result
+            where result.winning_number = owned.number
+         )
+     and case
+           when next_rank = 1 then owned.owner_count = 1
+           else owned.owner_count <= next_rank
+         end
+   order by random()
+   limit 1;
+
+  if selected_number is null then
+    raise exception 'NO_ELIGIBLE_LUCKY_NUMBER' using errcode = 'P0001';
+  end if;
+
+  with latest_rsvp as (
+    select distinct on (guest_id)
+           guest_id,
+           attending
+      from public.rsvp_submissions
+     order by guest_id, created_at desc, id desc
+  ), winning_owners as (
+    select distinct assignment.guest_id
+      from public.lucky_number_assignments as assignment
+      join latest_rsvp
+        on latest_rsvp.guest_id = assignment.guest_id
+       and latest_rsvp.attending = true
+     where selected_number = any(assignment.numbers)
+  )
+  select count(*)::integer
+    into base_winner_count
+    from winning_owners;
+
+  with latest_rsvp as (
+    select distinct on (guest_id)
+           guest_id,
+           attending
+      from public.rsvp_submissions
+     order by guest_id, created_at desc, id desc
+  ), winning_owners as (
+    select distinct assignment.guest_id
+      from public.lucky_number_assignments as assignment
+      join latest_rsvp
+        on latest_rsvp.guest_id = assignment.guest_id
+       and latest_rsvp.attending = true
+     where selected_number = any(assignment.numbers)
+  ), candidates as (
+    select assignment.guest_id
+      from public.lucky_number_assignments as assignment
+      join latest_rsvp
+        on latest_rsvp.guest_id = assignment.guest_id
+       and latest_rsvp.attending = true
+     where not exists (
+             select 1
+               from winning_owners
+              where winning_owners.guest_id = assignment.guest_id
+           )
+     group by assignment.guest_id
+     order by random()
+     limit greatest(next_rank - base_winner_count, 0)
+  )
+  select coalesce(array_agg(candidates.guest_id), '{}'::text[])
+    into supplemental_guest_ids
+    from candidates;
+
+  if base_winner_count + cardinality(supplemental_guest_ids) < next_rank then
+    raise exception 'INSUFFICIENT_PRIZE_WINNERS' using errcode = 'P0001';
+  end if;
+
+  insert into public.lucky_draw_results (
+    prize_rank,
+    winning_number,
+    supplemental_guest_ids
+  )
+  values (next_rank, selected_number, supplemental_guest_ids)
+  returning * into inserted_result;
+
+  return inserted_result;
+end;
+$$;
+
+revoke execute on function public.draw_next_lucky_prize() from public, anon, authenticated;
+grant execute on function public.draw_next_lucky_prize() to service_role;

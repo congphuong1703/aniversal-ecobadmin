@@ -10,6 +10,7 @@ let luckyNumberMigration = "";
 let luckyDrawMigration = "";
 let randomizedLuckyDrawMigration = "";
 let activeRsvpLuckyDrawMigration = "";
+let supplementalLuckyDrawMigration = "";
 
 describe("Supabase migration", () => {
   beforeAll(async () => {
@@ -53,6 +54,15 @@ describe("Supabase migration", () => {
       fileURLToPath(
         new URL(
           "../../supabase/migrations/202609080004_filter_lucky_draw_to_active_rsvps.sql",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    supplementalLuckyDrawMigration = await readFile(
+      fileURLToPath(
+        new URL(
+          "../../supabase/migrations/202609120001_add_supplemental_lucky_winners.sql",
           import.meta.url,
         ),
       ),
@@ -143,6 +153,27 @@ describe("Supabase migration", () => {
     );
     expect(activeRsvpLuckyDrawMigration).toMatch(
       /raise exception 'ALL_PRIZES_DRAWN'[\s\S]*raise exception 'NO_ELIGIBLE_LUCKY_NUMBER'/i,
+    );
+  });
+
+  it("persists and fills supplemental lucky draw winners atomically", () => {
+    expect(supplementalLuckyDrawMigration).toMatch(
+      /add column if not exists supplemental_guest_ids text\[\] not null default '\{\}'::text\[\]/i,
+    );
+    expect(supplementalLuckyDrawMigration).toMatch(
+      /select assignment\.guest_id[\s\S]*order by random\(\)[\s\S]*limit greatest\(next_rank/i,
+    );
+    expect(supplementalLuckyDrawMigration).toMatch(
+      /raise exception 'INSUFFICIENT_PRIZE_WINNERS'/i,
+    );
+    expect(supplementalLuckyDrawMigration).toMatch(
+      /insert into public\.lucky_draw_results\s*\(\s*prize_rank,\s*winning_number,\s*supplemental_guest_ids\s*\)/i,
+    );
+    expect(supplementalLuckyDrawMigration).toMatch(
+      /revoke execute on function public\.draw_next_lucky_prize\(\) from public, anon, authenticated/i,
+    );
+    expect(supplementalLuckyDrawMigration).toMatch(
+      /grant execute on function public\.draw_next_lucky_prize\(\) to service_role/i,
     );
   });
 });

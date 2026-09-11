@@ -57,3 +57,29 @@ export function selectEligibleNumber(
 
   return candidates[randomIndex(0, candidates.length)]![0];
 }
+
+export function selectSupplementalGuestIds(
+  candidateGuestIds: readonly string[],
+  existingGuestIds: readonly string[],
+  targetCount: number,
+  randomIndex: RandomIndex = (min, max) => randomInt(min, max),
+): string[] | null {
+  const existing = new Set(existingGuestIds);
+  const available = [
+    ...new Set(candidateGuestIds.filter((guestId) => !existing.has(guestId))),
+  ];
+  const missingCount = Math.max(0, targetCount - existing.size);
+
+  if (available.length < missingCount) {
+    return null;
+  }
+
+  const selected: string[] = [];
+
+  while (selected.length < missingCount) {
+    const index = randomIndex(0, available.length);
+    selected.push(available.splice(index, 1)[0]!);
+  }
+
+  return selected;
+}

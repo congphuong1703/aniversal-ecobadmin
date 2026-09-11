@@ -125,6 +125,7 @@ export function getE2eLuckyDrawPersistence(
 
       const row: LuckyDrawResultRow = {
         ...input,
+        supplemental_guest_ids: input.supplemental_guest_ids ?? [],
         created_at: new Date().toISOString(),
       };
       store.drawRows.push(row);

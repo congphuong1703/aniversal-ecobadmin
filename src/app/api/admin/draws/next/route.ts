@@ -7,6 +7,7 @@ import { E2E_WORKER_HEADER, normalizeE2eWorkerScope } from "@/lib/e2e-mode";
 import {
   AllPrizesDrawnError,
   drawNextLuckyPrize,
+  InsufficientPrizeWinnersError,
   NoEligibleLuckyNumberError,
 } from "@/lib/lucky-draw-repository";
 
@@ -41,6 +42,14 @@ export async function POST(request: Request) {
 
     if (error instanceof AllPrizesDrawnError) {
       return jsonError(409, error.code, error.message);
+    }
+
+    if (error instanceof InsufficientPrizeWinnersError) {
+      return jsonError(
+        409,
+        error.code,
+        "Không đủ người tham dự để bổ sung đủ người trúng giải.",
+      );
     }
 
     return jsonError(500, "INTERNAL_ERROR", "Unable to draw next prize.");

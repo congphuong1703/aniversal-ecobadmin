@@ -275,6 +275,18 @@ describe("RSVP repository", () => {
           created_at: "2026-07-29T01:00:00.000Z",
         },
       ),
+      makeRow(
+        {
+          guest_id: "guest-02",
+          attending: true,
+          message: null,
+          client_submission_id: "21000000-0000-4000-8000-000000000002",
+        },
+        {
+          id: "31000000-0000-4000-8000-000000000002",
+          created_at: "2026-07-29T01:00:01.000Z",
+        },
+      ),
     ]);
     const repository = createRsvpRepository(memory.adapter, GUEST_FIXTURES, {
       async listAssignments() {
@@ -284,6 +296,11 @@ describe("RSVP repository", () => {
             numbers: [1, 12, 22, 53, 52],
             created_at: "2026-07-29T00:00:00.000Z",
           },
+          {
+            guest_id: "guest-02",
+            numbers: [2, 13, 23, 54, 51],
+            created_at: "2026-07-29T00:00:01.000Z",
+          },
         ];
       },
       async getState() {
@@ -292,13 +309,13 @@ describe("RSVP repository", () => {
             {
               prizeRank: 1,
               prizeKey: "special",
-              label: "Giải đặc biệt",
+              label: "Giải nhất",
               result: {
                 prizeRank: 1,
                 prizeKey: "special",
-                label: "Giải đặc biệt",
+                label: "Giải nhất",
                 winningNumber: 1,
-                winners: ["Nguyễn Văn An"],
+                winners: ["Nguyễn Văn An", "Trần Minh Châu"],
                 createdAt: "2026-07-29T02:00:00.000Z",
               },
             },
@@ -325,7 +342,12 @@ describe("RSVP repository", () => {
     );
 
     expect(guest?.luckyNumbers).toEqual([1, 12, 22, 53, 52]);
-    expect(guest?.wonPrizes).toEqual(["Giải đặc biệt", "Giải nhì"]);
+    expect(guest?.wonPrizes).toEqual(["Giải nhất", "Giải nhì"]);
+    expect(
+      (await repository.getAdminDashboard()).guests.find(
+        ({ id }) => id === "guest-02",
+      )?.wonPrizes,
+    ).toEqual(["Giải nhất"]);
   });
 
   it("uses the submission id as a deterministic tie-breaker", async () => {

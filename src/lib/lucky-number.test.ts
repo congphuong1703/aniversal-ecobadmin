@@ -5,6 +5,7 @@ import {
   generateLuckyNumbers,
   isEligibleOwnerCount,
   selectEligibleNumber,
+  selectSupplementalGuestIds,
 } from "@/lib/lucky-number";
 
 describe("lucky number rules", () => {
@@ -41,5 +42,27 @@ describe("lucky number rules", () => {
         () => 0,
       ),
     ).toBe(53);
+  });
+
+  it("fills a short prize with unique candidates outside the existing winners", () => {
+    expect(
+      selectSupplementalGuestIds(
+        ["guest-01", "guest-02", "guest-02", "guest-03", "guest-04", "guest-05"],
+        ["guest-01"],
+        4,
+        () => 0,
+      ),
+    ).toEqual(["guest-02", "guest-03", "guest-04"]);
+  });
+
+  it("returns null when the available candidates cannot fill the prize", () => {
+    expect(
+      selectSupplementalGuestIds(
+        ["guest-01", "guest-02", "guest-02"],
+        ["guest-01"],
+        4,
+        () => 0,
+      ),
+    ).toBeNull();
   });
 });

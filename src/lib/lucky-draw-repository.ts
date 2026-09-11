@@ -12,6 +12,7 @@ import { getGuestDirectory } from "@/lib/guest-directory";
 import {
   isEligibleOwnerCount,
   selectEligibleNumber,
+  selectSupplementalGuestIds,
   type LuckyNumber,
   type RandomIndex,
 } from "@/lib/lucky-number";
@@ -24,6 +25,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export type LuckyDrawResultRow = {
   prize_rank: number;
   winning_number: number;
+  supplemental_guest_ids: readonly string[];
   created_at: string;
 };
 
@@ -67,16 +69,28 @@ export class AllPrizesDrawnError extends Error {
   }
 }
 
+export class InsufficientPrizeWinnersError extends Error {
+  readonly code = "INSUFFICIENT_PRIZE_WINNERS";
+
+  constructor() {
+    super("There are not enough attending guests to fill this prize.");
+    this.name = "InsufficientPrizeWinnersError";
+  }
+}
+
 const resultRowSchema = z.object({
   prize_rank: z.number().int().min(1).max(5),
   winning_number: z.number().int().min(0).max(99),
+  supplemental_guest_ids: z.array(z.string()).default([]),
   created_at: z.iso.datetime({ offset: true }),
 });
 
 export type LuckyDrawResultInsert = Pick<
   LuckyDrawResultRow,
   "prize_rank" | "winning_number"
->;
+> & {
+  supplemental_guest_ids?: readonly string[];
+};
 
 export type LuckyDrawPersistenceAdapter = {
   listAssignments(): Promise<readonly LuckyNumberAssignmentRow[]>;
@@ -116,9 +130,14 @@ function mapResult(
 ): LuckyDrawResult {
   const prize = prizeForRank(row.prize_rank);
   const guestNames = new Map(guests.map((guest) => [guest.id, guest.fullName]));
-  const winners = assignments
+  const numberWinnerIds = assignments
     .filter(({ numbers }) => numbers.includes(row.winning_number))
-    .map(({ guest_id }) => guestNames.get(guest_id))
+    .map(({ guest_id }) => guest_id);
+  const winnerIds = [
+    ...new Set([...numberWinnerIds, ...row.supplemental_guest_ids]),
+  ];
+  const winners = winnerIds
+    .map((guestId) => guestNames.get(guestId))
     .filter((name): name is string => name !== undefined);
 
   return {
@@ -176,7 +195,11 @@ function persistenceError(operation: string, cause: unknown) {
 }
 
 function drawError(error: unknown) {
-  if (error instanceof NoEligibleLuckyNumberError || error instanceof AllPrizesDrawnError) {
+  if (
+    error instanceof NoEligibleLuckyNumberError ||
+    error instanceof AllPrizesDrawnError ||
+    error instanceof InsufficientPrizeWinnersError
+  ) {
     return error;
   }
 
@@ -191,6 +214,10 @@ function drawError(error: unknown) {
 
   if (message === "ALL_PRIZES_DRAWN") {
     return new AllPrizesDrawnError();
+  }
+
+  if (message === "INSUFFICIENT_PRIZE_WINNERS") {
+    return new InsufficientPrizeWinnersError();
   }
 
   return persistenceError("draw", error);
@@ -239,10 +266,25 @@ export function createLuckyDrawRepository(
       throw new NoEligibleLuckyNumberError();
     }
 
+    const numberWinnerIds = assignments
+      .filter(({ numbers }) => numbers.includes(winningNumber))
+      .map(({ guest_id }) => guest_id);
+    const supplementalGuestIds = selectSupplementalGuestIds(
+      assignments.map(({ guest_id }) => guest_id),
+      numberWinnerIds,
+      nextRank,
+      randomIndex,
+    );
+
+    if (supplementalGuestIds === null) {
+      throw new InsufficientPrizeWinnersError();
+    }
+
     return parseResult(
       await persistence.insertResult({
         prize_rank: nextRank,
         winning_number: winningNumber,
+        supplemental_guest_ids: supplementalGuestIds,
       }),
     );
   }
@@ -278,7 +320,7 @@ const productionPersistence: LuckyDrawPersistenceAdapter = {
   async listResults() {
     const { data, error } = await getSupabaseServerClient()
       .from("lucky_draw_results")
-      .select("prize_rank, winning_number, created_at")
+      .select("prize_rank, winning_number, supplemental_guest_ids, created_at")
       .order("prize_rank", { ascending: true });
 
     if (error) {
@@ -291,8 +333,11 @@ const productionPersistence: LuckyDrawPersistenceAdapter = {
   async insertResult(input) {
     const { data, error } = await getSupabaseServerClient()
       .from("lucky_draw_results")
-      .insert(input)
-      .select("prize_rank, winning_number, created_at")
+      .insert({
+        ...input,
+        supplemental_guest_ids: input.supplemental_guest_ids ?? [],
+      })
+      .select("prize_rank, winning_number, supplemental_guest_ids, created_at")
       .single();
 
     if (error || !data) {

@@ -104,7 +104,7 @@ const DRAW_STATE: LuckyDrawState = {
     {
       prizeRank: 1,
       prizeKey: "special",
-      label: "Giải đặc biệt",
+      label: "Giải nhất",
       reward: "Quà tặng đặc biệt · Nội dung sẽ cập nhật",
       result: null,
     },
@@ -832,14 +832,14 @@ describe("AdminDashboard", () => {
     const guests: AdminGuestRow[] = [
       {
         ...GUESTS[0],
-        wonPrizes: ["Giải đặc biệt", "Giải nhì"],
+        wonPrizes: ["Giải nhất", "Giải nhì"],
       },
       GUESTS[1],
     ];
     fetchMock.mockResolvedValueOnce(dashboardResponse(60_000, SUMMARY, guests));
     renderDashboard();
     expect(await screen.findByText("Nguyễn Văn An")).toBeInTheDocument();
-    expect(screen.getByText("Giải đặc biệt · Giải nhì")).toBeInTheDocument();
+    expect(screen.getByText("Giải nhất · Giải nhì")).toBeInTheDocument();
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: /lọc người trúng giải/i }),

@@ -64,9 +64,10 @@ supabase/migrations/202609080001_create_lucky_number_tables.sql
 supabase/migrations/202609080002_add_atomic_lucky_draw_function.sql
 supabase/migrations/202609080003_randomize_lucky_prize_order.sql
 supabase/migrations/202609080004_filter_lucky_draw_to_active_rsvps.sql
+supabase/migrations/202609120001_add_supplemental_lucky_winners.sql
 ```
 
-Do not skip the random-prize (`202609080003`) or active-RSVP (`202609080004`) migration. These SQL files must be applied to the same Supabase project that the Vercel deployment uses.
+Do not skip the random-prize (`202609080003`), active-RSVP (`202609080004`), or supplemental-winner (`202609120001`) migration. These SQL files must be applied to the same Supabase project that the Vercel deployment uses.
 
 The migrations are idempotent: they use `create extension if not exists`, `create table if not exists`, and `create index if not exists`, plus `create or replace function` for the atomic rate-limit and draw RPCs. They create both the guest-history index and the global dashboard keyset index on `(created_at desc, id desc)`.
 
@@ -145,7 +146,7 @@ npx playwright install chromium
 
 1. Replace `public/guests/guest-01.svg` through `public/guests/guest-27.svg` with the real `4:5` images in place.
 2. Replace the 27 sample names in `src/data/guests.ts` without changing stable IDs.
-3. Apply all Supabase migrations in chronological order to the same Supabase project configured in Vercel, including the random-prize and active-RSVP migrations.
+3. Apply all Supabase migrations in chronological order to the same Supabase project configured in Vercel, including the random-prize, active-RSVP, and supplemental-winner migrations.
 4. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, and `RSVP_VERIFICATION_SECRET` in Vercel for Production.
 5. Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`, and `npm run build`.
 6. Deploy the `main` branch to Vercel.

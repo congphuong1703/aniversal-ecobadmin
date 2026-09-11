@@ -275,16 +275,18 @@ export function createRsvpRepository(
       const assignmentsByGuestId = new Map(
         assignments.map((assignment) => [assignment.guest_id, assignment]),
       );
-      const prizeLabelsByNumber = new Map<number, string[]>();
+      const prizeLabelsByWinnerName = new Map<string, string[]>();
 
       for (const draw of drawState.draws) {
         if (!draw.result) {
           continue;
         }
 
-        const labels = prizeLabelsByNumber.get(draw.result.winningNumber) ?? [];
-        labels.push(draw.label);
-        prizeLabelsByNumber.set(draw.result.winningNumber, labels);
+        for (const winner of draw.result.winners) {
+          const labels = prizeLabelsByWinnerName.get(winner) ?? [];
+          labels.push(draw.label);
+          prizeLabelsByWinnerName.set(winner, labels);
+        }
       }
 
       const dashboardGuests = guests.map<AdminGuestRow>((guest) => {
@@ -295,15 +297,9 @@ export function createRsvpRepository(
         const assignment = assignmentsByGuestId.get(guest.id);
         const luckyNumbers =
           history[0]?.attending && assignment ? assignment.numbers : null;
-        const wonPrizes = assignment
-          ? [
-              ...new Set(
-                assignment.numbers.flatMap(
-                  (number) => prizeLabelsByNumber.get(number) ?? [],
-                ),
-              ),
-            ]
-          : [];
+        const wonPrizes = [
+          ...new Set(prizeLabelsByWinnerName.get(guest.fullName) ?? []),
+        ];
 
         return {
           ...guest,

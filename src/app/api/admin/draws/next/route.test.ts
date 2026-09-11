@@ -3,7 +3,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readAdminSessionMetadata } from "@/lib/admin-session";
-import { getE2eLuckyNumberPersistence, resetE2eLuckyNumberState } from "@/lib/e2e-lucky-number-state";
+import {
+  getE2eLuckyDrawPersistence,
+  getE2eLuckyNumberPersistence,
+  resetE2eLuckyNumberState,
+} from "@/lib/e2e-lucky-number-state";
 import { POST } from "./route";
 
 vi.mock("@/lib/admin-session", () => ({
@@ -51,10 +55,19 @@ describe("POST /api/admin/draws/next", () => {
       expiresAt: 1_788_000_000,
       serverTime: 1_787_999_995_250,
     });
-    await getE2eLuckyNumberPersistence(SCOPE).insertAssignment({
-      guest_id: "guest-01",
-      numbers: [10, 11, 12, 13, 14],
-    });
+    const assignments = getE2eLuckyNumberPersistence(SCOPE);
+    for (const [index, guestId] of [
+      "guest-01",
+      "guest-02",
+      "guest-03",
+      "guest-04",
+      "guest-05",
+    ].entries()) {
+      await assignments.insertAssignment({
+        guest_id: guestId,
+        numbers: [10 + index * 10, 11 + index * 10, 12 + index * 10, 13 + index * 10, 14 + index * 10],
+      });
+    }
 
     const response = await POST(request());
 
@@ -83,6 +96,33 @@ describe("POST /api/admin/draws/next", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({
       error: { code: "NO_ELIGIBLE_LUCKY_NUMBER" },
+    });
+  });
+
+  it("returns 409 when there are not enough guests to fill the prize", async () => {
+    vi.mocked(readAdminSessionMetadata).mockResolvedValue({
+      expiresAt: 1_788_000_000,
+      serverTime: 1_787_999_995_250,
+    });
+    await getE2eLuckyNumberPersistence(SCOPE).insertAssignment({
+      guest_id: "guest-01",
+      numbers: [14, 15, 16, 17, 18],
+    });
+    const draws = getE2eLuckyDrawPersistence(SCOPE);
+    for (const [prize_rank, winning_number] of [
+      [1, 10],
+      [2, 11],
+      [3, 12],
+      [4, 13],
+    ] as const) {
+      await draws.insertResult({ prize_rank, winning_number });
+    }
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: { code: "INSUFFICIENT_PRIZE_WINNERS" },
     });
   });
 });
