@@ -12,35 +12,35 @@ const PENDING_DRAWS = {
       prizeRank: 1,
       prizeKey: "special",
       label: "Giải nhất",
-      reward: "1 giải trúng thưởng - Bình nước thể thao giữ nhiệt",
+      reward: "1 giải",
       result: null,
     },
     {
       prizeRank: 2,
       prizeKey: "second",
       label: "Giải nhì",
-      reward: "2 giải - Băng đô thể thao",
+      reward: "2 giải",
       result: null,
     },
     {
       prizeRank: 3,
       prizeKey: "third",
       label: "Giải ba",
-      reward: "3 giải - Bình xịt lạnh giảm đau",
+      reward: "3 giải",
       result: null,
     },
     {
       prizeRank: 4,
       prizeKey: "fourth",
       label: "Giải tư",
-      reward: "4 giải - mỗi giải gồm 1 cốc bia hơi Hà Nội (nam 1 cốc, nữ nửa cốc), sau khi thực hiện xong có quà bí mật",
+      reward: "4 giải",
       result: null,
     },
     {
       prizeRank: 5,
       prizeKey: "fifth",
       label: "Giải năm",
-      reward: "5 giải - mỗi giải gồm 1 cốc bia hơi Hà Nội (nam 1 cốc, nữ nửa cốc) và quà bí mật sau khi thực hiện",
+      reward: "5 giải",
       result: null,
     },
   ],
@@ -158,11 +158,11 @@ describe("PublicDrawPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Cùng theo dõi năm lượt quay/i)).not.toBeInTheDocument();
     expect(screen.getAllByText("Chờ quay")).toHaveLength(5);
-    expect(screen.getByText("1 giải trúng thưởng - Bình nước thể thao giữ nhiệt")).toBeInTheDocument();
-    expect(screen.getByText("2 giải - Băng đô thể thao")).toBeInTheDocument();
-    expect(screen.getByText("3 giải - Bình xịt lạnh giảm đau")).toBeInTheDocument();
-    expect(screen.getByText(/4 giải - mỗi giải gồm 1 cốc bia hơi Hà Nội/)).toBeInTheDocument();
-    expect(screen.getByText(/5 giải - mỗi giải gồm 1 cốc bia hơi Hà Nội/)).toBeInTheDocument();
+    expect(screen.getAllByText("1 giải")).toHaveLength(2);
+    expect(screen.getAllByText("2 giải")).toHaveLength(2);
+    expect(screen.getAllByText("3 giải")).toHaveLength(2);
+    expect(screen.getAllByText("4 giải")).toHaveLength(2);
+    expect(screen.getAllByText("5 giải")).toHaveLength(2);
     expect(screen.queryByText(/· Demo|nội dung sẽ cập nhật/i)).not.toBeInTheDocument();
     expect(screen.getByText(/chưa có giải nào được mở/i)).toBeInTheDocument();
     expect(screen.queryByText(/nội bộ|pháp lý/i)).not.toBeInTheDocument();

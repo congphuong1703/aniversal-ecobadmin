@@ -21,11 +21,11 @@ import {
 
 const SCOPE = "draw-repository-test";
 const EXPECTED_REWARDS = [
-  "1 giải trúng thưởng - Bình nước thể thao giữ nhiệt",
-  "2 giải - Băng đô thể thao",
-  "3 giải - Bình xịt lạnh giảm đau",
-  "4 giải - mỗi giải gồm 1 cốc bia hơi Hà Nội (nam 1 cốc, nữ nửa cốc), sau khi thực hiện xong có quà bí mật",
-  "5 giải - mỗi giải gồm 1 cốc bia hơi Hà Nội (nam 1 cốc, nữ nửa cốc) và quà bí mật sau khi thực hiện",
+  "1 giải",
+  "2 giải",
+  "3 giải",
+  "4 giải",
+  "5 giải",
 ] as const;
 
 function numbers(values: number[]) {
