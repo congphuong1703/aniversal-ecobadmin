@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { DRAW_PRIZES } from "@/data/draw-prizes";
 import type {
   LuckyDrawEntry,
   LuckyDrawState,
@@ -176,7 +177,13 @@ export function PublicDrawPage() {
           <h2 className="font-display" id="draw-prizes-title">
             Giải thưởng
           </h2>
-          <p>Hạng giải sẽ được hệ thống chọn ngẫu nhiên ở mỗi lượt quay.</p>
+          <ol>
+            {DRAW_PRIZES.map((prize) => (
+              <li key={prize.key}>
+                <strong>{prize.label}:</strong> {prize.rank} giải
+              </li>
+            ))}
+          </ol>
         </section>
         <section
           id="cach-kiem-tra"
